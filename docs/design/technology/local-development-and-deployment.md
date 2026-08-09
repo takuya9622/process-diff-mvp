@@ -67,6 +67,10 @@ Hobbyには個人Git連携と組み込みCI/CDが含まれますが、利用条�
 - ローカルの実値はGit管理外の`.env.local`またはCompose用のenv fileへ保存する。
 - VercelのPreviewとProductionでは、Vercel上のEnvironment Variablesを使用する。
 - `DATABASE_URL`はローカルPostgreSQLとNeonで値を分け、アプリケーションコードは共通化する。
+- `BETTER_AUTH_SECRET`は32文字以上の高entropy値を環境ごとに分け、`.env.example`には
+  ダミー値だけを記載する。
+- `BETTER_AUTH_URL`とtrusted originsはlocal、Preview、Productionの実originへ合わせ、
+  wildcardを使用しない。
 - `NEXT_PUBLIC_`を付ける変数には、ブラウザへ公開してよい値だけを設定する。
 - `.vercel`ディレクトリとVercelのtoken、project IDをコミットしない。
 
@@ -89,3 +93,4 @@ Hobbyには個人Git連携と組み込みCI/CDが含まれますが、利用条�
 5. コンテナ内でlint、format check、buildを再実行できる。
 6. migrationとseedを適用後、Vitestのintegration testを実行できる。
 7. 公式Playwrightコンテナから中核フローのE2Eテストを実行できる。
+8. 利用者登録、サインイン、onboarding、サインアウトと組織分離を確認できる。

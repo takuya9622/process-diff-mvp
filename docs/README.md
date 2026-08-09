@@ -6,14 +6,15 @@
 
 | ファイル | 内容 | 状態 |
 |---|---|---|
-| [requirements/README.md](requirements/README.md) | MVPの要件定義一式 | 初期ドラフト |
-| [design/screens-and-user-flow.md](design/screens-and-user-flow.md) | SPAの画面一覧と中核ユーザーフロー | 初期決定 |
+| [requirements/README.md](requirements/README.md) | MVPの要件定義一式 | 追加機能設計済み |
+| [design/screens-and-user-flow.md](design/screens-and-user-flow.md) | 認証を含む画面一覧と中核ユーザーフロー | 追加機能設計済み |
+| [design/authentication-and-organization.md](design/authentication-and-organization.md) | Better Auth、組織、権限、データ分離の次期MVP設計 | 実装前の設計決定 |
 | [design/sample-business-scenario.md](design/sample-business-scenario.md) | 経費精算のサンプル業務と基準シナリオ | 初期決定 |
 | [design/impact-search.md](design/impact-search.md) | 影響候補の探索・並び順・経路表示の規則 | 初期決定 |
-| [design/demo-state.md](design/demo-state.md) | 公開デモの共有状態、競合、リセット | 初期決定 |
-| [design/data-flow.md](design/data-flow.md) | 業務変更から差分・影響候補までの論理データフロー | 初期ドラフト |
-| [design/table-design.md](design/table-design.md) | MVPで永続化する論理テーブルとER図 | 初期ドラフト |
-| [design/technology/README.md](design/technology/README.md) | MVPの技術スタックと利用境界 | 初期決定 |
+| [design/demo-state.md](design/demo-state.md) | 組織別サンプル状態、競合、リセット | 追加機能設計済み |
+| [design/data-flow.md](design/data-flow.md) | 業務変更から差分・影響候補までの論理データフロー | 追加機能設計済み |
+| [design/table-design.md](design/table-design.md) | 現行論理テーブル、次期ER図、図の更新ルール | 追加機能設計済み |
+| [design/technology/README.md](design/technology/README.md) | MVPの技術スタックと利用境界 | 追加機能設計済み |
 | [github-workflow.md](github-workflow.md) | GitHubとブランチの運用ルール | 運用ルール |
 
 ## 管理方針
