@@ -4,14 +4,15 @@
 
 | 項目 | 内容 |
 |---|---|
-| 文書状態 | file-based routing構造は実装済み・認証と組織境界は実装前 |
+| 文書状態 | Better Auth基盤とfile-based routing構造は実装済み・認証機能と組織境界は実装前 |
 | 対象 | Better Authによるパスワード認証、組織、権限、組織別データ分離 |
 | 最終更新日 | 2026-08-09 |
 
 この文書は、認証と組織ワークスペースを追加する次期MVPの設計正本です。現行実装との差分を
 明確にするため、実装済みの4テーブルを記録する[MVPテーブル設計](table-design.md)とは
-分けて管理します。file-based routingと共有layoutは先行して実装済みです。認証・組織境界の
-実装時は、要件と画面導線を同じPull Requestで関連文書へ反映します。
+分けて管理します。file-based routingと共有layoutに加え、Better Auth core、Drizzle adapter、
+organization plugin、環境変数検証を先行して実装済みです。認証・組織境界の実装時は、要件と
+画面導線を同じPull Requestで関連文書へ反映します。
 
 ## 2. 解決する課題
 
@@ -73,9 +74,10 @@ Better Authがセッションとパスワード資格情報を安全に管理す
 
 ### 4.3 段階的な実装状態
 
-file-based routingへの移行を認証・schema変更より先に実施します。現段階では
-`/organizations/shared-demo`を一時的な組織routeとし、entity route、change route、共有layout、
-Not Found境界を実装します。
+file-based routingへの移行とBetter Authの基盤設定を、認証・schema変更より先に実施します。
+現段階では`/organizations/shared-demo`を一時的な組織routeとし、entity route、change route、
+共有layout、Not Found境界を実装しています。Better Authはserver設定だけを追加しており、
+Route Handler、auth client、認証画面、認証・組織schema、migrationはまだ追加していません。
 
 `shared-demo`は現在の共有サンプルをrouteへ載せるための固定slugであり、認可済み組織を意味しません。
 業務データも引き続き一つの共有状態です。Better Authと組織schemaを追加する段階で、固定slugの

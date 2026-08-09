@@ -8,6 +8,8 @@ services:
     ports:
       - "${WEB_PORT:-3000}:3000"
     environment:
+      BETTER_AUTH_SECRET: "${BETTER_AUTH_SECRET:-process-diff-local-development-secret-change-me}"
+      BETTER_AUTH_URL: "${BETTER_AUTH_URL:-http://localhost:3000}"
       DATABASE_URL: "postgresql://${POSTGRES_USER:-process_diff}:${POSTGRES_PASSWORD:-process_diff_local}@db:5432/${POSTGRES_DB:-process_diff}"
       NEXT_TELEMETRY_DISABLED: "1"
       WATCHPACK_POLLING: "true"
