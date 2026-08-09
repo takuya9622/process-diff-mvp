@@ -19,30 +19,43 @@ export function getBetterAuthEnvironment(
     throw new Error("BETTER_AUTH_URL is not configured.");
   }
 
+  const baseURL = parseOrigin("BETTER_AUTH_URL", configuredUrl);
+  const trustedOrigins = (environment.BETTER_AUTH_TRUSTED_ORIGINS ?? "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .map((value) => parseOrigin("BETTER_AUTH_TRUSTED_ORIGINS", value));
+
+  return {
+    baseURL,
+    secret,
+    trustedOrigins,
+  } as const;
+}
+
+function parseOrigin(variableName: string, value: string) {
   let url: URL;
 
   try {
-    url = new URL(configuredUrl);
+    url = new URL(value);
   } catch {
-    throw new Error("BETTER_AUTH_URL must be a valid absolute URL.");
+    throw new Error(`${variableName} must contain valid absolute URLs.`);
   }
 
   if (url.protocol !== "http:" && url.protocol !== "https:") {
-    throw new Error("BETTER_AUTH_URL must use the http or https protocol.");
+    throw new Error(`${variableName} must use the http or https protocol.`);
   }
 
   if (
+    url.hostname.includes("*") ||
     url.username ||
     url.password ||
     url.pathname !== "/" ||
     url.search ||
     url.hash
   ) {
-    throw new Error("BETTER_AUTH_URL must be an origin without a path.");
+    throw new Error(`${variableName} must contain origins without a path.`);
   }
 
-  return {
-    baseURL: url.origin,
-    secret,
-  } as const;
+  return url.origin;
 }

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 
 import { isUuid } from "@/lib/domain/identifier";
 import { validateChangeInput } from "@/lib/domain/input-validation";
@@ -13,6 +13,8 @@ import {
 import type { ConfirmChangeInput, ConfirmChangeResult } from "@/types/actions";
 
 export async function confirmChange(
+  organizationId: string,
+  changedByUserId: string,
   input: ConfirmChangeInput,
 ): Promise<ConfirmChangeResult> {
   const validation = validateChangeInput(input.content, input.reason);
@@ -35,13 +37,18 @@ export async function confirmChange(
 
   return database.transaction(async (transaction) => {
     await transaction.execute(
-      sql`select id from business_entities where id = ${input.businessEntityId} for update`,
+      sql`select id from business_entities where organization_id = ${organizationId} and id = ${input.businessEntityId} for update`,
     );
 
     const [entity] = await transaction
       .select()
       .from(businessEntities)
-      .where(eq(businessEntities.id, input.businessEntityId))
+      .where(
+        and(
+          eq(businessEntities.organizationId, organizationId),
+          eq(businessEntities.id, input.businessEntityId),
+        ),
+      )
       .limit(1);
 
     if (!entity) {
@@ -55,7 +62,12 @@ export async function confirmChange(
     const [currentVersion] = await transaction
       .select()
       .from(entityVersions)
-      .where(eq(entityVersions.businessEntityId, entity.id))
+      .where(
+        and(
+          eq(entityVersions.organizationId, organizationId),
+          eq(entityVersions.businessEntityId, entity.id),
+        ),
+      )
       .orderBy(desc(entityVersions.versionNumber))
       .limit(1);
 
@@ -92,6 +104,7 @@ export async function confirmChange(
 
     await transaction.insert(entityVersions).values({
       id: nextVersionId,
+      organizationId,
       businessEntityId: entity.id,
       versionNumber: currentVersion.versionNumber + 1,
       content: validation.value.content,
@@ -99,6 +112,8 @@ export async function confirmChange(
     });
     await transaction.insert(changeSets).values({
       id: changeSetId,
+      organizationId,
+      changedByUserId,
       businessEntityId: entity.id,
       beforeVersionId: currentVersion.id,
       afterVersionId: nextVersionId,
@@ -111,7 +126,12 @@ export async function confirmChange(
         currentContent: validation.value.content,
         updatedAt: now,
       })
-      .where(eq(businessEntities.id, entity.id));
+      .where(
+        and(
+          eq(businessEntities.organizationId, organizationId),
+          eq(businessEntities.id, entity.id),
+        ),
+      );
 
     return { status: "success" as const, changeSetId };
   });

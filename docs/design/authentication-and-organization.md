@@ -4,27 +4,26 @@
 
 | 項目 | 内容 |
 |---|---|
-| 文書状態 | Better Auth基盤とfile-based routing構造は実装済み・認証機能と組織境界は実装前 |
+| 文書状態 | 認証・組織・権限・組織別データ境界をMVPへ反映済み |
 | 対象 | Better Authによるパスワード認証、組織、権限、組織別データ分離 |
 | 最終更新日 | 2026-08-09 |
 
-この文書は、認証と組織ワークスペースを追加する次期MVPの設計正本です。現行実装との差分を
-明確にするため、実装済みの4テーブルを記録する[MVPテーブル設計](table-design.md)とは
-分けて管理します。file-based routingと共有layoutに加え、Better Auth core、Drizzle adapter、
-organization plugin、環境変数検証を先行して実装済みです。認証・組織境界の実装時は、要件と
-画面導線を同じPull Requestで関連文書へ反映します。
+この文書は、認証と組織ワークスペースを含む現行MVPの設計正本です。物理テーブルとER図は
+[MVPテーブル設計](table-design.md)、画面導線は[画面・ユーザーフロー](screens-and-user-flow.md)
+と分けて管理します。file-based routing、Better Auth、組織別データ境界、権限別操作を同じ
+実装単位で反映し、認証済みでもglobal queryが残る中間状態を作らない構成にしています。
 
 ## 2. 解決する課題
 
-現行アプリケーションは、誰でも同じ共有デモを操作できます。そのため、利用者が操作中に
-次のことを理解しにくい状態です。
+認証・組織追加前のアプリケーションは誰でも同じ共有デモを操作し、利用者が操作中に次のことを
+理解しにくい状態でした。
 
 - 自分がどの組織の、どの立場で操作しているか
 - 変更した内容が誰の業務データに属するか
 - 誰が変更を確定したか
 - このサービスが、どの担当者のどの判断を便利にするか
 
-次期MVPでは、主な利用者を「組織内で業務ルールや手順の変更を担当する業務改善担当者・
+現行MVPでは、主な利用者を「組織内で業務ルールや手順の変更を担当する業務改善担当者・
 業務オーナー」と定めます。提供価値は、次の一文を画面上でも理解できる状態にします。
 
 > 自分の組織の業務ルールを変えたとき、確認が必要な文書・業務・システムを洗い出せる。
@@ -72,16 +71,12 @@ Better Authがセッションとパスワード資格情報を安全に管理す
 サインインでき、パスワードを失うと復旧できない制約を明示します。外部評価の範囲を広げる
 前に、メール確認とパスワード再設定を必須の次段階として実装します。
 
-### 4.3 段階的な実装状態
+### 4.3 実装状態
 
-file-based routingへの移行とBetter Authの基盤設定を、認証・schema変更より先に実施します。
-現段階では`/organizations/shared-demo`を一時的な組織routeとし、entity route、change route、
-共有layout、Not Found境界を実装しています。Better Authはserver設定だけを追加しており、
-Route Handler、auth client、認証画面、認証・組織schema、migrationはまだ追加していません。
-
-`shared-demo`は現在の共有サンプルをrouteへ載せるための固定slugであり、認可済み組織を意味しません。
-業務データも引き続き一つの共有状態です。Better Authと組織schemaを追加する段階で、固定slugの
-判定をsessionとmembershipによる組織解決へ置き換え、Repositoryをorganization IDで限定します。
+file-based routing、Better Auth Route Handlerとclient、認証画面、組織onboarding、認証・組織
+schema、2段階migrationを実装済みです。固定slugの判定は廃止し、組織routeでsessionと
+membershipからorganization IDを解決します。業務データの一覧・詳細・履歴・変更・resetは
+すべてそのorganization IDで限定します。
 
 ## 5. 認証と初回セットアップ
 
@@ -120,8 +115,13 @@ Route Handler、auth client、認証画面、認証・組織schema、migration�
 `workspace_status = provisioning | ready | failed`相当の状態を持たせるのではなく、seedの
 存在確認から再開できる処理にします。追加状態列が本当に必要かは実装検証で判断します。
 
+実装検証の結果、追加状態列は不要でした。組織作成後にseedが失敗した場合も、再試行時に既存の
+membershipを解決し、組織単位のadvisory lockとseed存在確認から再開します。
+
 一人の利用者が作成できる組織はMVPでは一つです。organization pluginの作成許可を、所属が
 ない利用者にだけ与えます。複数組織のデータ構造は維持しますが、画面と操作は追加しません。
+plugin設定でも`organizationLimit = 1`、`membershipLimit = 1`、`invitationLimit = 0`とし、
+組織削除とMVP外の組織・メンバー・招待操作をAccess Controlで拒否します。
 
 ## 6. 画面とURL
 
@@ -231,8 +231,8 @@ MVPの画面から作成される最初の利用者は全員`owner`です。`edi
 | 関数 | 責務 |
 |---|---|
 | `requireSession()` | セッションを検証し、認証済みuserを返す |
-| `requireOrganizationMembership(slug)` | 組織を解決し、membershipとroleを返す |
-| `requireOrganizationPermission(slug, permission)` | membership確認後に必要権限を検証する |
+| `requireOrganizationContext(slug)` | 組織を解決し、membership、role、userを返す |
+| `hasWorkspacePermission(role, action)` | `workspace.read/change/reset`の権限を検証する |
 
 Client Componentから`user_id`、`role`、`organization_id`を渡しても信頼しません。変更者は
 検証済みsessionから、組織は検証済みmembershipから決定します。
@@ -297,12 +297,12 @@ schemaを起点にし、手書きで必須列を省略しません。
 `change_sets.changed_by_user_id`は`users.id`を参照し、MVPの変更確定ではNULLを許可しません。
 利用者削除は対象外とし、参照中のuser削除を拒否します。
 
-### 9.4 次期ER図
+### 9.4 ER図
 
 認証・組織追加後の関係は
-[編集可能な次期ER図](authentication-and-organization.drawio.svg)を正本と
-します。実装時にDrizzle schemaとmigrationが確定した段階で、現行の
-`mvp-er-diagram.drawio.svg`を置き換え、列・制約の差を残しません。
+[編集可能な現行ER図](mvp-er-diagram.drawio.svg)を正本とします。Drizzle schemaとmigrationで
+確定した12テーブル、列、外部キーを記載し、draw.ioの編集情報をSVGへ埋め込んでいます。
+[実装前の提案図](authentication-and-organization.drawio.svg)は設計経緯の比較用として残します。
 
 ## 10. 組織別サンプル状態
 
@@ -372,32 +372,32 @@ Requestへ記録します。認証テーブルや実在データを同じreset�
 - 一組織のresetが別組織のdomain row、user、session、membershipへ影響しない
 - ChangeSetへsession userが変更者として記録・表示される
 
-Playwrightでは二つの独立browser contextと二組織を使い、URL直接入力とServer Actionの改ざんを
-含めて検証します。integration testでは複合外部キーが組織横断参照を拒否することも確認します。
+Playwrightでは専用利用者・組織を作成し、認証一連の動線、URL直接入力、変更、resetを検証します。
+integration testでは二組織のfixtureを使い、別組織IDによる取得・変更・resetと、複合外部キーを
+使った組織横断参照を拒否することを確認します。role別許可はAccess Controlのunit testで固定します。
 
-## 15. 実装順序
+## 15. 実装結果
 
-1. Better Auth core、Drizzle adapter、organization plugin、環境変数検証を追加する。
-2. 認証・組織schemaを生成し、命名mappingとexpansion migrationをreviewする。
-3. auth Route Handler、auth client、server-side guardを追加する。
-4. sign-up、sign-in、onboarding、sign-outを実装する。
-5. domain tableへorganization IDと変更者を追加し、全Repositoryを組織scopeへ変更する。
-6. 組織layout、entity/change route、ヘッダー、変更者表示、role別UIを追加する。
-7. 組織別seed・reset、cleanup migration、constraint追加を実装する。
-8. 認証、権限、組織分離、既存中核フローをE2Eで検証する。
+1. Better Auth 1.6.26、Drizzle adapter、organization plugin、環境変数検証を追加した。
+2. `auth@1.6.26`で認証・組織schemaを生成し、複数形・snake_caseの物理名と制約をreviewした。
+3. expansion migrationとcleanup migrationを分離し、ローカルの既存デモDBで適用を確認した。
+4. auth Route Handler、auth client、server-side guard、sign-up、sign-in、onboarding、sign-outを実装した。
+5. domain tableへorganization IDと変更者を追加し、全データアクセスを組織scopeへ変更した。
+6. role別UI・Server Action認可、組織別seed・reset、変更者表示を実装した。
+7. unit、integration、Playwright E2E、Next.js production buildで中核フローを検証した。
 
 手順5の前に公開画面を認証必須へ切り替えません。認証済みでもdomain queryがglobalのままになる
 中間状態を、本番へデプロイしないためです。
 
-## 16. 実装時に確定する事項
+## 16. 実装で確定した事項
 
-次は設計方針を変えない、ライブラリ生成物や実装検証で確定する詳細です。
-
-- Better AuthとDrizzle adapterの導入時点の正確なversion
-- 生成schemaにおけるindex・外部キー名
-- onboarding再試行の実装に追加状態列が必要か
-- Vercel Previewごとのtrusted origin設定方法
-- 認証rate limitのpath別閾値
+- Better AuthとDrizzle adapterは1.6.26を固定する。
+- Better Auth CLIは`auth@1.6.26`を使用し、`@better-auth/cli`とのversion不一致を避ける。
+- UUID、複数形テーブル名、snake_case列名、index・外部キー名は生成schemaとDrizzle migrationで
+  固定する。
+- onboarding再試行に追加状態列は設けず、membershipと組織別seedの存在から再開する。
+- `BETTER_AUTH_TRUSTED_ORIGINS`は完全なoriginをカンマ区切りで指定し、wildcardとpathを拒否する。
+- rate limitはBetter Auth既定値をPostgreSQLへ保存する。path別の独自閾値は導入しない。
 
 ## 17. 参照する公式仕様
 

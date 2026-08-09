@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 
 import {
   BUSINESS_ENTITY_TYPE_LABELS,
@@ -15,6 +15,7 @@ import {
 } from "@/lib/domain/impact-search";
 import { createLineDiff, summarizeLineDiff } from "@/lib/domain/line-diff";
 import { database } from "@/lib/server/database/client";
+import { users } from "@/lib/server/database/auth-schema.generated";
 import {
   businessEntities,
   businessRelations,
@@ -38,8 +39,8 @@ type WorkspaceModel = {
   versionsById: ReadonlyMap<string, typeof entityVersions.$inferSelect>;
 };
 
-export async function getWorkspaceNavigationEntities() {
-  return (await loadWorkspaceModel()).entities.map((entity) => ({
+export async function getWorkspaceNavigationEntities(organizationId: string) {
+  return (await loadWorkspaceModel(organizationId)).entities.map((entity) => ({
     id: entity.id,
     type: entity.type,
     typeLabel: entity.typeLabel,
@@ -48,19 +49,20 @@ export async function getWorkspaceNavigationEntities() {
   }));
 }
 
-export async function getInitialWorkspaceEntityId() {
-  const { entities } = await loadWorkspaceModel();
+export async function getInitialWorkspaceEntityId(organizationId: string) {
+  const { entities } = await loadWorkspaceModel(organizationId);
   return findInitialEntity(entities).id;
 }
 
 export async function getEntityWorkspaceData(
+  organizationId: string,
   businessEntityId: string,
 ): Promise<WorkspaceData | null> {
   if (!isUuid(businessEntityId)) {
     return null;
   }
 
-  const model = await loadWorkspaceModel();
+  const model = await loadWorkspaceModel(organizationId);
   const selectedEntity = model.entitiesById.get(businessEntityId);
 
   if (!selectedEntity) {
@@ -71,14 +73,19 @@ export async function getEntityWorkspaceData(
 }
 
 export async function getChangeWorkspaceData(
+  organizationId: string,
   changeSetId: string,
 ): Promise<WorkspaceData | null> {
   if (!isUuid(changeSetId)) {
     return null;
   }
 
-  const model = await loadWorkspaceModel();
-  const changeResult = await getChangeResult(changeSetId, model);
+  const model = await loadWorkspaceModel(organizationId);
+  const changeResult = await getChangeResult(
+    organizationId,
+    changeSetId,
+    model,
+  );
 
   if (!changeResult) {
     return null;
@@ -93,82 +100,93 @@ export async function getChangeWorkspaceData(
   return createWorkspaceData(model, selectedEntity, changeResult);
 }
 
-const loadWorkspaceModel = cache(async (): Promise<WorkspaceModel> => {
-  const [entityRows, relationRows, versionRows] = await Promise.all([
-    database.select().from(businessEntities),
-    database.select().from(businessRelations),
-    database
-      .select()
-      .from(entityVersions)
-      .orderBy(desc(entityVersions.versionNumber)),
-  ]);
+const loadWorkspaceModel = cache(
+  async (organizationId: string): Promise<WorkspaceModel> => {
+    const [entityRows, relationRows, versionRows] = await Promise.all([
+      database
+        .select()
+        .from(businessEntities)
+        .where(eq(businessEntities.organizationId, organizationId)),
+      database
+        .select()
+        .from(businessRelations)
+        .where(eq(businessRelations.organizationId, organizationId)),
+      database
+        .select()
+        .from(entityVersions)
+        .where(eq(entityVersions.organizationId, organizationId))
+        .orderBy(desc(entityVersions.versionNumber)),
+    ]);
 
-  const versionsById = new Map(
-    versionRows.map((version) => [version.id, version]),
-  );
-  const currentVersionsByEntityId = new Map<
-    string,
-    (typeof versionRows)[number]
-  >();
-
-  for (const version of versionRows) {
-    if (!currentVersionsByEntityId.has(version.businessEntityId)) {
-      currentVersionsByEntityId.set(version.businessEntityId, version);
-    }
-  }
-
-  const entities = entityRows.map((entity): BusinessEntity => {
-    if (!isBusinessEntityType(entity.entityType)) {
-      throw new Error(`Unknown business entity type: ${entity.entityType}`);
-    }
-
-    const currentVersion = currentVersionsByEntityId.get(entity.id);
-
-    if (!currentVersion) {
-      throw new Error(`Business entity ${entity.id} does not have a version.`);
-    }
-
-    return {
-      id: entity.id,
-      type: entity.entityType,
-      typeLabel: BUSINESS_ENTITY_TYPE_LABELS[entity.entityType],
-      name: entity.name,
-      description: entity.description,
-      content: entity.currentContent,
-      currentVersionId: currentVersion.id,
-      currentVersionNumber: currentVersion.versionNumber,
-      updatedAt: entity.updatedAt.toISOString(),
-    };
-  });
-
-  entities.sort(compareEntities);
-
-  if (entities.length === 0) {
-    throw new Error(
-      "Demo data is empty. Run the database seed before opening the app.",
+    const versionsById = new Map(
+      versionRows.map((version) => [version.id, version]),
     );
-  }
+    const currentVersionsByEntityId = new Map<
+      string,
+      (typeof versionRows)[number]
+    >();
 
-  const relations = relationRows.map((relation): BusinessRelation => {
-    if (!isRelationType(relation.relationType)) {
-      throw new Error(`Unknown relation type: ${relation.relationType}`);
+    for (const version of versionRows) {
+      if (!currentVersionsByEntityId.has(version.businessEntityId)) {
+        currentVersionsByEntityId.set(version.businessEntityId, version);
+      }
     }
 
-    return {
-      id: relation.id,
-      sourceEntityId: relation.sourceEntityId,
-      targetEntityId: relation.targetEntityId,
-      type: relation.relationType,
-    };
-  });
+    const entities = entityRows.map((entity): BusinessEntity => {
+      if (!isBusinessEntityType(entity.entityType)) {
+        throw new Error(`Unknown business entity type: ${entity.entityType}`);
+      }
 
-  return {
-    entities,
-    relations,
-    entitiesById: new Map(entities.map((entity) => [entity.id, entity])),
-    versionsById,
-  };
-});
+      const currentVersion = currentVersionsByEntityId.get(entity.id);
+
+      if (!currentVersion) {
+        throw new Error(
+          `Business entity ${entity.id} does not have a version.`,
+        );
+      }
+
+      return {
+        id: entity.id,
+        type: entity.entityType,
+        typeLabel: BUSINESS_ENTITY_TYPE_LABELS[entity.entityType],
+        name: entity.name,
+        description: entity.description,
+        content: entity.currentContent,
+        currentVersionId: currentVersion.id,
+        currentVersionNumber: currentVersion.versionNumber,
+        updatedAt: entity.updatedAt.toISOString(),
+      };
+    });
+
+    entities.sort(compareEntities);
+
+    if (entities.length === 0) {
+      throw new Error(
+        "Demo data is empty. Run the database seed before opening the app.",
+      );
+    }
+
+    const relations = relationRows.map((relation): BusinessRelation => {
+      if (!isRelationType(relation.relationType)) {
+        throw new Error(`Unknown relation type: ${relation.relationType}`);
+      }
+
+      return {
+        id: relation.id,
+        sourceEntityId: relation.sourceEntityId,
+        targetEntityId: relation.targetEntityId,
+        type: relation.relationType,
+      };
+    });
+
+    return {
+      entities,
+      relations,
+      entitiesById: new Map(entities.map((entity) => [entity.id, entity])),
+      versionsById,
+    };
+  },
+);
 
 function createWorkspaceData(
   model: WorkspaceModel,
@@ -187,18 +205,27 @@ function createWorkspaceData(
 }
 
 async function getChangeResult(
+  organizationId: string,
   changeSetId: string,
   model: WorkspaceModel,
 ): Promise<ChangeResult | null> {
-  const [changeSet] = await database
-    .select()
+  const [row] = await database
+    .select({ changeSet: changeSets, changedByName: users.name })
     .from(changeSets)
-    .where(eq(changeSets.id, changeSetId))
+    .innerJoin(users, eq(changeSets.changedByUserId, users.id))
+    .where(
+      and(
+        eq(changeSets.organizationId, organizationId),
+        eq(changeSets.id, changeSetId),
+      ),
+    )
     .limit(1);
 
-  if (!changeSet || !model.entitiesById.has(changeSet.businessEntityId)) {
+  if (!row || !model.entitiesById.has(row.changeSet.businessEntityId)) {
     return null;
   }
+
+  const { changeSet, changedByName } = row;
 
   const beforeVersion = model.versionsById.get(changeSet.beforeVersionId);
   const afterVersion = model.versionsById.get(changeSet.afterVersionId);
@@ -217,6 +244,7 @@ async function getChangeResult(
     beforeContent: beforeVersion.content,
     afterContent: afterVersion.content,
     reason: changeSet.reason,
+    changedByName,
     createdAt: changeSet.createdAt.toISOString(),
     diff,
     diffSummary: summarizeLineDiff(diff),

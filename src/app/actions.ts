@@ -3,6 +3,10 @@
 import { revalidatePath } from "next/cache";
 
 import { confirmChange } from "@/lib/server/change-service";
+import {
+  getOrganizationContext,
+  hasWorkspacePermission,
+} from "@/lib/server/auth/session";
 import { resetDemoState } from "@/lib/server/database/demo-state";
 import type {
   ConfirmChangeInput,
@@ -11,10 +15,31 @@ import type {
 } from "@/types/actions";
 
 export async function confirmChangeAction(
+  organizationSlug: string,
   input: ConfirmChangeInput,
 ): Promise<ConfirmChangeResult> {
   try {
-    const result = await confirmChange(input);
+    const context = await getOrganizationContext(organizationSlug);
+
+    if (!context) {
+      return {
+        status: "unauthorized",
+        message: "ログイン状態または組織への所属を確認できませんでした。",
+      };
+    }
+
+    if (!hasWorkspacePermission(context.role, "change")) {
+      return {
+        status: "forbidden",
+        message: "この組織で変更を確定する権限がありません。",
+      };
+    }
+
+    const result = await confirmChange(
+      context.organizationId,
+      context.user.id,
+      input,
+    );
 
     if (result.status === "success") {
       revalidatePath("/organizations/[organizationSlug]", "layout");
@@ -31,9 +56,27 @@ export async function confirmChangeAction(
   }
 }
 
-export async function resetDemoAction(): Promise<ResetDemoResult> {
+export async function resetDemoAction(
+  organizationSlug: string,
+): Promise<ResetDemoResult> {
   try {
-    const result = await resetDemoState();
+    const context = await getOrganizationContext(organizationSlug);
+
+    if (!context) {
+      return {
+        status: "unauthorized",
+        message: "ログイン状態または組織への所属を確認できませんでした。",
+      };
+    }
+
+    if (!hasWorkspacePermission(context.role, "reset")) {
+      return {
+        status: "forbidden",
+        message: "組織のサンプルを初期化できるのはオーナーだけです。",
+      };
+    }
+
+    const result = await resetDemoState(context.organizationId);
     revalidatePath("/organizations/[organizationSlug]", "layout");
     return { status: "success", initialEntityId: result.initialEntityId };
   } catch (error) {

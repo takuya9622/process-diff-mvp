@@ -27,10 +27,18 @@ const WorkspaceRouteStateContext = createContext<
 
 export function WorkspaceShell({
   organizationSlug,
+  organizationName,
+  userName,
+  roleLabel,
+  canReset,
   entities,
   children,
 }: {
   organizationSlug: string;
+  organizationName: string;
+  userName: string;
+  roleLabel: string;
+  canReset: boolean;
   entities: WorkspaceNavigationEntity[];
   children: ReactNode;
 }) {
@@ -55,7 +63,7 @@ export function WorkspaceShell({
 
   function resetDemo() {
     const confirmed = window.confirm(
-      "共有サンプルのすべての変更内容と変更履歴を削除し、初期状態へ戻します。続けますか？",
+      "この組織のすべての変更内容と変更履歴を削除し、初期状態へ戻します。続けますか？",
     );
 
     if (!confirmed) {
@@ -64,7 +72,7 @@ export function WorkspaceShell({
 
     setResetError(null);
     startTransition(async () => {
-      const result = await resetDemoAction();
+      const result = await resetDemoAction(organizationSlug);
 
       if (result.status === "success") {
         router.push(createEntityPath(organizationSlug, result.initialEntityId));
@@ -79,7 +87,13 @@ export function WorkspaceShell({
   return (
     <WorkspaceRouteStateContext.Provider value={setRouteState}>
       <div className="min-h-screen">
-        <WorkspaceHeader onReset={resetDemo} isPending={isPending} />
+        <WorkspaceHeader
+          organizationName={organizationName}
+          userName={userName}
+          roleLabel={roleLabel}
+          onReset={canReset ? resetDemo : undefined}
+          isPending={isPending}
+        />
         <main
           aria-busy={isPending}
           className="mx-auto max-w-[92rem] px-4 py-5 sm:px-6 sm:py-7 lg:px-8"
@@ -106,7 +120,7 @@ export function WorkspaceShell({
           </div>
 
           <footer className="px-2 pt-6 pb-2 text-center text-xs leading-5 text-content-tertiary">
-            Process Diff MVP · 公開用の架空データを使用しています
+            Process Diff MVP · 組織ごとに分離された架空データを使用しています
           </footer>
         </main>
       </div>
