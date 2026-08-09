@@ -15,6 +15,7 @@
 |---|---|---|
 | [product-requirements.md](product-requirements.md) | 機能、非機能、UX、受け入れ条件 | 画面、機能、テストを検討するとき |
 | [domain-and-impact.md](domain-and-impact.md) | データモデルと影響候補の判定 | ドメイン、データ、探索処理を検討するとき |
+| [../design/data-flow.md](../design/data-flow.md) | 要件を処理とデータの流れへ展開した初期設計 | 画面、状態管理、API、保存方式を検討するとき |
 
 サービスの目的、MVPの範囲、検証方針を確認するだけであれば、このファイルだけを読みます。
 
