@@ -8,6 +8,7 @@
 |---|---|---|
 | [requirements/README.md](requirements/README.md) | MVPの要件定義一式 | 初期ドラフト |
 | [design/data-flow.md](design/data-flow.md) | 業務変更から差分・影響候補までの論理データフロー | 初期ドラフト |
+| [design/table-design.md](design/table-design.md) | MVPで永続化する論理テーブルとER図 | 初期ドラフト |
 | [github-workflow.md](github-workflow.md) | GitHubとブランチの運用ルール | 運用ルール |
 
 ## 管理方針
