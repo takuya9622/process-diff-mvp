@@ -12,9 +12,26 @@
 
 Node.js、npm、PostgreSQLはコンテナ内で実行するため、ホストへの個別インストールは不要です。
 
+## 初回セットアップ
+
+リポジトリルートでPostgreSQLを起動し、migrationと公開用の架空サンプルを投入します。
+
+```bash
+docker compose up -d db
+docker compose run --rm --build web npm run db:migrate
+docker compose run --rm web npm run db:seed
+```
+
+`db:seed`はデータが存在する場合に再投入しません。共有サンプル全体を初期状態へ戻す場合は、
+画面右上の「サンプルを初期化」または次を使用します。
+
+```bash
+docker compose run --rm web npm run db:reset
+```
+
 ## ローカル起動
 
-リポジトリルートで次を実行します。
+初回セットアップ後、次を実行します。
 
 ```bash
 docker compose up --watch
@@ -48,6 +65,7 @@ docker compose exec web npm run lint
 docker compose exec web npm run format:check
 docker compose exec web npm run typecheck
 docker compose exec web npm test
+docker compose exec web npm run test:integration
 ```
 
 本番ビルドは開発サーバーと同じ`.next`を同時に更新しないよう、別コンテナで実行します。
@@ -58,6 +76,15 @@ docker compose run --rm --build --no-deps web npm run build
 
 コンテナを常駐させずに確認する場合は、同様に`docker compose run --rm --build --no-deps web`へ
 各npm commandを続けて実行できます。
+
+中核フローのE2Eテストは、公式Playwrightイメージを使う専用サービスで実行します。
+
+```bash
+docker compose --profile test run --rm --build e2e
+```
+
+このテストは共有サンプルを初期化し、変更、差分、影響候補、関係経路、結果の再表示、
+再初期化までをChromiumで確認します。
 
 ## 環境変数
 

@@ -4,7 +4,7 @@
 
 | 項目 | 内容 |
 |---|---|
-| 文書状態 | 初期決定 |
+| 文書状態 | MVP実装済み |
 | 対象 | Docker Composeによるローカル開発、環境変数、Vercel Git連携CD |
 | 最終更新日 | 2026-08-09 |
 
@@ -87,3 +87,5 @@ Hobbyには個人Git連携と組み込みCI/CDが含まれますが、利用条�
 3. ブラウザからNext.jsの画面を表示できる。
 4. `web`からPostgreSQLへ接続できる。
 5. コンテナ内でlint、format check、buildを再実行できる。
+6. migrationとseedを適用後、Vitestのintegration testを実行できる。
+7. 公式Playwrightコンテナから中核フローのE2Eテストを実行できる。

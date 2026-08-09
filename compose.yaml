@@ -56,5 +56,16 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  e2e:
+    profiles: ["test"]
+    build:
+      context: .
+      dockerfile: Dockerfile.e2e
+    environment:
+      PLAYWRIGHT_BASE_URL: "http://web:3000"
+    depends_on:
+      web:
+        condition: service_healthy
+
 volumes:
   postgres_data:
