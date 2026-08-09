@@ -4,7 +4,7 @@
 
 | 項目 | 内容 |
 |---|---|
-| 文書状態 | 初期決定 |
+| 文書状態 | MVP実装済み |
 | 対象 | MVPのアプリケーション、バックエンド、永続化、UI基盤 |
 | 最終更新日 | 2026-08-09 |
 
@@ -169,10 +169,10 @@ Drizzle ORMとDrizzle Kitを使い、次をリポジトリ内で管理します�
 - SQL migrationファイル
 - 制約と索引の変更履歴
 
-Drizzleは[NeonのHTTPおよびWebSocket接続](https://orm.drizzle.team/docs/connect-neon)を
-サポートしています。読み取りと単純なクエリは
-HTTP接続を初期候補とし、変更確定のトランザクションに対話的なセッションが必要な場合は
-WebSocket接続を使用します。実装開始時に、原子的更新を満たす最小の接続方式を検証します。
+接続driverには`postgres`（postgres.js）を採用します。ローカルPostgreSQLとNeonで同じ
+Drizzle実装を使用でき、変更確定時のtransactionと行lockを一つのsessionで実行できるためです。
+サーバーレス環境で接続数を増やさないよう、アプリケーションインスタンスごとの接続上限は
+`1`とし、prepared statementは無効にします。
 
 ### 6.3 状態の配置
 
@@ -289,9 +289,11 @@ PlaywrightをE2Eテストの選択肢とし、async Server ComponentsにはE2E�
 
 必要性が確認できた場合だけ、要件と責務を定義してから追加します。
 
-## 13. 実装過程で確定する事項
+## 13. 実装で確定した事項
 
-- DrizzleからNeonへ接続するdriverとトランザクション方式
-- `content`を自由記述テキストとして扱う範囲と差分ライブラリ
+- DrizzleからPostgreSQLへの接続にはpostgres.jsを使い、変更確定はtransactionと
+  `SELECT ... FOR UPDATE`で直列化する。
+- `content`は5,000文字以内のプレーンテキストとし、外部ライブラリを追加せず
+  Longest Common Subsequenceに基づく行単位差分を算出する。
 
 これらは中核技術の採用を変えずに実装または検証で判断できるため、現時点では固定しません。
