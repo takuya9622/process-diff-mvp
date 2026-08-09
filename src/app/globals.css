@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+@theme {
+  --color-canvas: #f3f4ef;
+  --color-canvas-accent: #dfe9e3;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f7f8f5;
+  --color-surface-strong: #e9eeea;
+  --color-content-primary: #15241f;
+  --color-content-secondary: #53635d;
+  --color-content-tertiary: #74837d;
+  --color-outline: #d8dfda;
+  --color-outline-strong: #aebbb4;
+  --color-action-primary: #176b55;
+  --color-action-primary-hover: #105944;
+  --color-action-muted: #e2ece7;
+  --color-focus-ring: #239574;
+  --color-status-info-bg: #e7f2ef;
+  --color-status-info-content: #135d4a;
+  --color-status-warning-bg: #fff4d6;
+  --color-status-warning-content: #765713;
+  --color-status-danger-bg: #fdebea;
+  --color-status-danger-content: #9b302c;
+  --color-change-added-bg: #e5f5eb;
+  --color-change-added-content: #21633b;
+  --color-change-added-outline: #add8bd;
+  --color-change-removed-bg: #fbeceb;
+  --color-change-removed-content: #913c37;
+  --color-change-removed-outline: #edc0bc;
+  --color-type-process-bg: #e7f0ff;
+  --color-type-process-content: #245994;
+  --color-type-rule-bg: #f0eafa;
+  --color-type-rule-content: #65429a;
+  --color-type-document-bg: #fff2d9;
+  --color-type-document-content: #7b5815;
+  --color-type-system-bg: #e3f3f0;
+  --color-type-system-content: #1c6859;
+  --color-type-role-bg: #f6e8ed;
+  --color-type-role-content: #89445c;
+  --shadow-panel: 0 24px 70px rgb(34 56 48 / 10%);
+}
+
+:root {
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  background: var(--color-canvas);
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background:
+    radial-gradient(
+      circle at 8% 0%,
+      var(--color-canvas-accent),
+      transparent 35rem
+    ),
+    var(--color-canvas);
+  color: var(--color-content-primary);
+  font-family:
+    Inter, "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+::selection {
+  background: var(--color-action-muted);
+}
