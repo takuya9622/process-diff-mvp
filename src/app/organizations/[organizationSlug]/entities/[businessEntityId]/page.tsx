@@ -1,7 +1,10 @@
 import { notFound } from "next/navigation";
 
 import { BusinessWorkspace } from "@/components/pages/business-workspace/business-workspace";
-import { isCurrentDemoOrganization } from "@/constants/routes";
+import {
+  hasWorkspacePermission,
+  requireOrganizationContext,
+} from "@/lib/server/auth/session";
 import { getEntityWorkspaceData } from "@/lib/server/workspace-service";
 
 type EntityPageProps = {
@@ -14,11 +17,11 @@ type EntityPageProps = {
 export default async function EntityPage({ params }: EntityPageProps) {
   const { organizationSlug, businessEntityId } = await params;
 
-  if (!isCurrentDemoOrganization(organizationSlug)) {
-    notFound();
-  }
-
-  const workspace = await getEntityWorkspaceData(businessEntityId);
+  const context = await requireOrganizationContext(organizationSlug);
+  const workspace = await getEntityWorkspaceData(
+    context.organizationId,
+    businessEntityId,
+  );
 
   if (!workspace) {
     notFound();
@@ -28,6 +31,7 @@ export default async function EntityPage({ params }: EntityPageProps) {
     <BusinessWorkspace
       key={workspace.selectedEntity.id}
       organizationSlug={organizationSlug}
+      canChange={hasWorkspacePermission(context.role, "change")}
       workspace={workspace}
     />
   );

@@ -1,4 +1,6 @@
-export const CURRENT_DEMO_ORGANIZATION_SLUG = "shared-demo";
+export const SIGN_IN_PATH = "/sign-in";
+export const SIGN_UP_PATH = "/sign-up";
+export const ONBOARDING_PATH = "/onboarding";
 
 export function createOrganizationPath(organizationSlug: string) {
   return `/organizations/${encodeURIComponent(organizationSlug)}`;
@@ -18,6 +20,14 @@ export function createChangePath(
   return `${createOrganizationPath(organizationSlug)}/changes/${encodeURIComponent(changeSetId)}`;
 }
 
-export function isCurrentDemoOrganization(organizationSlug: string) {
-  return organizationSlug === CURRENT_DEMO_ORGANIZATION_SLUG;
+export function createSignInPath(returnTo?: string) {
+  if (!returnTo) {
+    return SIGN_IN_PATH;
+  }
+
+  return `${SIGN_IN_PATH}?returnTo=${encodeURIComponent(returnTo)}`;
+}
+
+export function sanitizeReturnTo(value: string | undefined) {
+  return value?.startsWith("/") && !value.startsWith("//") ? value : "/";
 }

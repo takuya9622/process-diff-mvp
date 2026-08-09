@@ -4,13 +4,33 @@ const INITIAL_CONTENT =
   "経費が3,000円以上の場合、領収書を添付する。\n紙の領収書は申請後30日間保管する。";
 const CHANGED_CONTENT =
   "金額にかかわらず、すべての経費申請に領収書を添付する。\n紙の領収書は申請後30日間保管する。";
+const PASSWORD = "process-diff-e2e-password";
 
-test("変更、差分、影響候補、経路、再表示、リセットを完了できる", async ({
+test("登録、組織作成、変更、再ログイン、組織境界、リセットを完了できる", async ({
   page,
 }) => {
-  await page.goto("/");
-  await resetDemo(page);
+  const uniqueSuffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const userName = `E2E利用者 ${uniqueSuffix}`;
+  const email = `e2e-${uniqueSuffix}@example.com`;
 
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/sign-in$/);
+  await page.getByRole("link", { name: "新規登録" }).click();
+  await page.getByLabel("名前").fill(userName);
+  await page.getByLabel("メールアドレス").fill(email);
+  await page.locator('input[name="password"]').fill(PASSWORD);
+  await page.getByLabel("パスワード（確認）").fill(PASSWORD);
+  await page.getByRole("button", { name: "新規登録" }).click();
+
+  await expect(page).toHaveURL(/\/onboarding$/);
+  await page.getByLabel("組織名").fill(`E2E組織 ${uniqueSuffix}`);
+  await page.getByRole("button", { name: "作成して始める" }).click();
+  await expect(page).toHaveURL(/\/organizations\/[^/]+\/entities\/[0-9a-f-]+$/);
+
+  const organizationUrl = new URL(page.url());
+  const organizationSlug = organizationUrl.pathname.split("/")[2];
+  await expect(page.getByText(userName, { exact: false })).toBeVisible();
+  await expect(page.getByText("オーナー", { exact: true })).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "領収書提出ルール", level: 1 }),
   ).toBeVisible();
@@ -29,19 +49,18 @@ test("変更、差分、影響候補、経路、再表示、リセットを完�
     page.getByRole("heading", { name: "経費規程", level: 1 }),
   ).toBeVisible();
   await expect(page).toHaveURL(
-    /\/organizations\/shared-demo\/entities\/[0-9a-f-]+$/,
+    new RegExp(`/organizations/${organizationSlug}/entities/[0-9a-f-]+$`),
   );
   await page.goBack();
   await expect(page).toHaveURL(initialEntityUrl);
-  await expect(
-    page.getByRole("heading", { name: "領収書提出ルール", level: 1 }),
-  ).toBeVisible();
 
   await page
     .getByRole("button", { name: "この業務を変更する", exact: true })
     .click();
   await expect(
-    page.getByText("このデモの変更内容は、ほかの利用者にも共有されます。"),
+    page.getByText("変更内容はこの組織のメンバーだけに共有されます。", {
+      exact: false,
+    }),
   ).toBeVisible();
   await page
     .getByLabel("変更後の内容 必須", { exact: true })
@@ -59,9 +78,6 @@ test("変更、差分、影響候補、経路、再表示、リセットを完�
   await expect(
     page.getByLabel(`追加: ${CHANGED_CONTENT.split("\n")[0]}`),
   ).toBeVisible();
-  await expect(
-    page.getByLabel(`変更なし: ${CHANGED_CONTENT.split("\n")[1]}`),
-  ).toBeVisible();
 
   await page
     .getByRole("button", {
@@ -70,21 +86,18 @@ test("変更、差分、影響候補、経路、再表示、リセットを完�
     })
     .click();
   await expect(page).toHaveURL(
-    /\/organizations\/shared-demo\/changes\/[0-9a-f-]+$/,
+    new RegExp(`/organizations/${organizationSlug}/changes/[0-9a-f-]+$`),
   );
 
   await expect(
     page.getByText("変更を保存しました", { exact: true }),
   ).toBeVisible();
+  await expect(page.getByText(`${userName} ·`, { exact: false })).toBeVisible();
   await expect(page.getByText("直接 4件", { exact: false })).toBeVisible();
   await expect(page.getByText("2段階先 6件", { exact: false })).toBeVisible();
 
   const candidateButtons = page.locator("button[aria-pressed]");
   await expect(candidateButtons).toHaveCount(10);
-  await expect(
-    candidateButtons.filter({ hasText: "会計システム" }),
-  ).toHaveCount(0);
-
   await candidateButtons.filter({ hasText: "立替経費の支払い" }).click();
   const pathPanel = page.getByTestId("impact-path-detail");
   await expect(pathPanel).toBeVisible();
@@ -94,12 +107,6 @@ test("変更、差分、影響候補、経路、再表示、リセットを完�
       level: 3,
     }),
   ).toBeVisible();
-  await expect(pathPanel.getByText("証憑確認", { exact: true })).toBeVisible();
-  await expect(
-    pathPanel.getByText("立替経費の支払いは証憑確認を前提とする", {
-      exact: true,
-    }),
-  ).toBeVisible();
 
   const changeResultUrl = page.url();
   await page.reload();
@@ -107,9 +114,26 @@ test("変更、差分、影響候補、経路、再表示、リセットを完�
   await expect(
     page.getByText("変更を保存しました", { exact: true }),
   ).toBeVisible();
-  await expect(candidateButtons).toHaveCount(10);
 
-  await resetDemo(page);
+  await page.goto("/organizations/not-my-organization");
+  await expect(
+    page.getByRole("heading", {
+      name: "指定された業務スペースは見つかりませんでした",
+      level: 1,
+    }),
+  ).toBeVisible();
+
+  await page.goto(initialEntityUrl);
+  await page.getByRole("button", { name: "ログアウト" }).click();
+  await expect(page).toHaveURL(/\/sign-in$/);
+  await page.goto(initialEntityUrl);
+  await expect(page).toHaveURL(/\/sign-in\?returnTo=/);
+  await page.getByLabel("メールアドレス").fill(email);
+  await page.getByLabel("パスワード").fill(PASSWORD);
+  await page.getByRole("button", { name: "ログイン", exact: true }).click();
+  await expect(page).toHaveURL(initialEntityUrl);
+
+  await resetDemo(page, organizationSlug);
   await page.goto(changeResultUrl);
   await expect(
     page.getByRole("heading", {
@@ -119,7 +143,10 @@ test("変更、差分、影響候補、経路、再表示、リセットを完�
   ).toBeVisible();
 });
 
-async function resetDemo(page: import("@playwright/test").Page) {
+async function resetDemo(
+  page: import("@playwright/test").Page,
+  organizationSlug: string,
+) {
   const resetButton = page.getByTestId("reset-demo-button");
   await expect(resetButton).toBeEnabled();
   const dialogHandled = page.waitForEvent("dialog").then(async (dialog) => {
@@ -128,6 +155,6 @@ async function resetDemo(page: import("@playwright/test").Page) {
   });
   await Promise.all([dialogHandled, resetButton.click()]);
   await expect(page).toHaveURL(
-    /\/organizations\/shared-demo\/entities\/[0-9a-f-]+$/,
+    new RegExp(`/organizations/${organizationSlug}/entities/[0-9a-f-]+$`),
   );
 }

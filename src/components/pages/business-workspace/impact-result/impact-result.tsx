@@ -67,6 +67,7 @@ export function ImpactResult({
           <div>
             <p className="font-semibold">変更を保存しました</p>
             <p className="mt-1 text-xs leading-5 opacity-80">
+              {changeResult.changedByName} ·{" "}
               {formatDateTime(changeResult.createdAt)} · 変更ID{" "}
               {changeResult.id.slice(0, 8)}
             </p>

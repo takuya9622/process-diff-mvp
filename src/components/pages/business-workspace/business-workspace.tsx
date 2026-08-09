@@ -21,9 +21,11 @@ type WorkspaceMode = "detail" | "edit" | "review" | "result";
 
 export function BusinessWorkspace({
   organizationSlug,
+  canChange,
   workspace,
 }: {
   organizationSlug: string;
+  canChange: boolean;
   workspace: WorkspaceData;
 }) {
   const router = useRouter();
@@ -106,7 +108,7 @@ export function BusinessWorkspace({
   function confirmDraft() {
     setActionError(null);
     startTransition(async () => {
-      const result = await confirmChangeAction({
+      const result = await confirmChangeAction(organizationSlug, {
         businessEntityId: baseEntity.id,
         beforeVersionId: baseEntity.currentVersionId,
         content: draftContent,
@@ -166,7 +168,7 @@ export function BusinessWorkspace({
             organizationSlug={organizationSlug}
             entity={workspace.selectedEntity}
             directRelations={workspace.directRelations}
-            onEdit={beginEdit}
+            onEdit={canChange ? beginEdit : undefined}
             onNavigate={handleEntityNavigate}
           />
         ) : null}

@@ -17,6 +17,7 @@ describe("getBetterAuthEnvironment", () => {
     ).toEqual({
       baseURL: "https://example.com:8443",
       secret: validEnvironment.BETTER_AUTH_SECRET,
+      trustedOrigins: [],
     });
   });
 
@@ -35,7 +36,7 @@ describe("getBetterAuthEnvironment", () => {
         ...validEnvironment,
         BETTER_AUTH_URL: "https://example.com/api/auth",
       }),
-    ).toThrow("BETTER_AUTH_URL must be an origin without a path.");
+    ).toThrow("BETTER_AUTH_URL must contain origins without a path.");
   });
 
   it("rejects a URL with an unsupported protocol", () => {
@@ -45,5 +46,24 @@ describe("getBetterAuthEnvironment", () => {
         BETTER_AUTH_URL: "ftp://example.com",
       }),
     ).toThrow("BETTER_AUTH_URL must use the http or https protocol.");
+  });
+
+  it("accepts only explicit additional trusted origins", () => {
+    expect(
+      getBetterAuthEnvironment({
+        ...validEnvironment,
+        BETTER_AUTH_TRUSTED_ORIGINS:
+          "http://web:3000, https://preview.example.com/",
+      }).trustedOrigins,
+    ).toEqual(["http://web:3000", "https://preview.example.com"]);
+
+    expect(() =>
+      getBetterAuthEnvironment({
+        ...validEnvironment,
+        BETTER_AUTH_TRUSTED_ORIGINS: "https://*.example.com",
+      }),
+    ).toThrow(
+      "BETTER_AUTH_TRUSTED_ORIGINS must contain origins without a path.",
+    );
   });
 });

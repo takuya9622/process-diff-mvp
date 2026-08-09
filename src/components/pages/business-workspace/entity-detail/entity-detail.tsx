@@ -18,7 +18,7 @@ export function EntityDetail({
   organizationSlug: string;
   entity: BusinessEntity;
   directRelations: DirectRelation[];
-  onEdit: () => void;
+  onEdit?: () => void;
   onNavigate: MouseEventHandler<HTMLAnchorElement>;
 }) {
   return (
@@ -28,7 +28,15 @@ export function EntityDetail({
         title={entity.name}
         description={entity.description ?? undefined}
         focusTarget
-        action={<Button onClick={onEdit}>この業務を変更する</Button>}
+        action={
+          onEdit ? (
+            <Button onClick={onEdit}>この業務を変更する</Button>
+          ) : (
+            <span className="rounded-xl bg-surface-strong px-4 py-3 text-sm font-semibold text-content-secondary">
+              閲覧者権限では変更できません
+            </span>
+          )
+        }
       />
 
       <div className="mt-7 grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(20rem,0.85fr)]">

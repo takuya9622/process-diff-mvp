@@ -1,12 +1,35 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
 import { Button } from "@/components/general/button";
+import { SIGN_IN_PATH } from "@/constants/routes";
+import { authClient } from "@/lib/auth/client";
 
 export function WorkspaceHeader({
+  organizationName,
+  userName,
+  roleLabel,
   onReset,
   isPending,
 }: {
-  onReset: () => void;
+  organizationName: string;
+  userName: string;
+  roleLabel: string;
+  onReset?: () => void;
   isPending: boolean;
 }) {
+  const router = useRouter();
+  const [isSigningOut, setIsSigningOut] = useState(false);
+
+  async function signOut() {
+    setIsSigningOut(true);
+    await authClient.signOut();
+    router.push(SIGN_IN_PATH);
+    router.refresh();
+  }
+
   return (
     <header className="border-b border-outline bg-surface/90 backdrop-blur">
       <div className="mx-auto flex max-w-[92rem] items-center justify-between gap-4 px-5 py-4 sm:px-8">
@@ -19,25 +42,38 @@ export function WorkspaceHeader({
               <p className="truncate text-sm font-bold text-content-primary sm:text-base">
                 Process Diff
               </p>
-              <span className="rounded-full bg-status-warning-bg px-2 py-0.5 text-[0.65rem] font-bold tracking-[0.12em] text-status-warning-content uppercase">
-                Shared demo
+              <span className="rounded-full bg-status-info-bg px-2 py-0.5 text-[0.65rem] font-bold tracking-[0.08em] text-status-info-content">
+                {roleLabel}
               </span>
             </div>
-            <p className="hidden text-xs text-content-tertiary sm:block">
-              経費精算サンプル · 変更と影響候補の確認
+            <p className="text-xs text-content-secondary">
+              {organizationName} · あなた: {userName}
+            </p>
+            <p className="hidden text-xs text-content-tertiary lg:block">
+              業務ルールを変えたときの確認候補を洗い出す
             </p>
           </div>
         </div>
-        <Button
-          data-testid="reset-demo-button"
-          variant="secondary"
-          className="shrink-0"
-          disabled={isPending}
-          onClick={onReset}
-        >
-          <span aria-hidden="true">↺</span>
-          <span className="hidden sm:inline">サンプルを</span>初期化
-        </Button>
+        <div className="flex shrink-0 items-center gap-2">
+          {onReset ? (
+            <Button
+              data-testid="reset-demo-button"
+              variant="secondary"
+              disabled={isPending || isSigningOut}
+              onClick={onReset}
+            >
+              <span aria-hidden="true">↺</span>
+              <span className="hidden sm:inline">サンプルを</span>初期化
+            </Button>
+          ) : null}
+          <Button
+            variant="ghost"
+            disabled={isPending || isSigningOut}
+            onClick={signOut}
+          >
+            {isSigningOut ? "ログアウト中…" : "ログアウト"}
+          </Button>
+        </div>
       </div>
     </header>
   );

@@ -16,8 +16,13 @@ export type ConfirmChangeResult =
       latestVersionNumber: number;
     }
   | { status: "not-found"; message: string }
+  | { status: "unauthorized" | "forbidden"; message: string }
   | { status: "error"; message: string };
 
 export type ResetDemoResult =
   | { status: "success"; initialEntityId: string }
+  | { status: "unauthorized" | "forbidden"; message: string }
   | { status: "error"; message: string };
+
+export type CreateOrganizationResult =
+  { status: "idle" } | { status: "invalid" | "error"; message: string };

@@ -1,7 +1,10 @@
 import { notFound } from "next/navigation";
 
 import { BusinessWorkspace } from "@/components/pages/business-workspace/business-workspace";
-import { isCurrentDemoOrganization } from "@/constants/routes";
+import {
+  hasWorkspacePermission,
+  requireOrganizationContext,
+} from "@/lib/server/auth/session";
 import { getChangeWorkspaceData } from "@/lib/server/workspace-service";
 
 type ChangePageProps = {
@@ -14,11 +17,11 @@ type ChangePageProps = {
 export default async function ChangePage({ params }: ChangePageProps) {
   const { organizationSlug, changeSetId } = await params;
 
-  if (!isCurrentDemoOrganization(organizationSlug)) {
-    notFound();
-  }
-
-  const workspace = await getChangeWorkspaceData(changeSetId);
+  const context = await requireOrganizationContext(organizationSlug);
+  const workspace = await getChangeWorkspaceData(
+    context.organizationId,
+    changeSetId,
+  );
 
   if (!workspace) {
     notFound();
@@ -28,6 +31,7 @@ export default async function ChangePage({ params }: ChangePageProps) {
     <BusinessWorkspace
       key={workspace.changeResult?.id}
       organizationSlug={organizationSlug}
+      canChange={hasWorkspacePermission(context.role, "change")}
       workspace={workspace}
     />
   );

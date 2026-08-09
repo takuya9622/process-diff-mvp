@@ -37,7 +37,7 @@ export function ChangeEditor({
       />
 
       <div className="mt-6 rounded-2xl border border-status-warning-content/20 bg-status-warning-bg px-4 py-3 text-sm leading-6 text-status-warning-content">
-        <strong className="font-bold">共有デモ:</strong> {DEMO_NOTICE}
+        <strong className="font-bold">組織ワークスペース:</strong> {DEMO_NOTICE}
       </div>
 
       <div className="mt-7 space-y-6">

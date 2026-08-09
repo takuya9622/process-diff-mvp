@@ -4,8 +4,8 @@ import {
   createChangePath,
   createEntityPath,
   createOrganizationPath,
-  CURRENT_DEMO_ORGANIZATION_SLUG,
-  isCurrentDemoOrganization,
+  createSignInPath,
+  sanitizeReturnTo,
 } from "@/constants/routes";
 
 describe("workspace routes", () => {
@@ -21,10 +21,14 @@ describe("workspace routes", () => {
     );
   });
 
-  it("認証・組織実装前は共有デモslugだけを受け入れる", () => {
-    expect(isCurrentDemoOrganization(CURRENT_DEMO_ORGANIZATION_SLUG)).toBe(
-      true,
+  it("ログイン後の戻り先はアプリ内の絶対パスだけを受け入れる", () => {
+    expect(createSignInPath("/organizations/sample")).toBe(
+      "/sign-in?returnTo=%2Forganizations%2Fsample",
     );
-    expect(isCurrentDemoOrganization("another-organization")).toBe(false);
+    expect(sanitizeReturnTo("/organizations/sample")).toBe(
+      "/organizations/sample",
+    );
+    expect(sanitizeReturnTo("//example.com")).toBe("/");
+    expect(sanitizeReturnTo("https://example.com")).toBe("/");
   });
 });
