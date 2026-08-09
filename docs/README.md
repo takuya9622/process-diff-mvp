@@ -8,6 +8,9 @@
 |---|---|---|
 | [requirements/README.md](requirements/README.md) | MVPの要件定義一式 | 初期ドラフト |
 | [design/screens-and-user-flow.md](design/screens-and-user-flow.md) | SPAの画面一覧と中核ユーザーフロー | 初期決定 |
+| [design/sample-business-scenario.md](design/sample-business-scenario.md) | 経費精算のサンプル業務と基準シナリオ | 初期決定 |
+| [design/impact-search.md](design/impact-search.md) | 影響候補の探索・並び順・経路表示の規則 | 初期決定 |
+| [design/demo-state.md](design/demo-state.md) | 公開デモの共有状態、競合、リセット | 初期決定 |
 | [design/data-flow.md](design/data-flow.md) | 業務変更から差分・影響候補までの論理データフロー | 初期ドラフト |
 | [design/table-design.md](design/table-design.md) | MVPで永続化する論理テーブルとER図 | 初期ドラフト |
 | [design/technology/README.md](design/technology/README.md) | MVPの技術スタックと利用境界 | 初期決定 |
