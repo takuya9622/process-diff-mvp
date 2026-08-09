@@ -9,7 +9,11 @@ import {
   changeSets,
   entityVersions,
 } from "@/lib/server/database/schema";
-import { getWorkspaceData } from "@/lib/server/workspace-service";
+import {
+  getChangeWorkspaceData,
+  getEntityWorkspaceData,
+  getInitialWorkspaceEntityId,
+} from "@/lib/server/workspace-service";
 
 describe("confirmChange", () => {
   beforeEach(async () => {
@@ -22,7 +26,7 @@ describe("confirmChange", () => {
   });
 
   it("現在内容、新しいversion、ChangeSetを一つの確定操作で保存する", async () => {
-    const workspace = await getWorkspaceData({});
+    const workspace = await getInitialWorkspaceData();
     const target = workspace.selectedEntity;
     const changedContent =
       "金額にかかわらず、すべての経費申請に領収書を添付する。\n紙の領収書は申請後30日間保管する。";
@@ -36,9 +40,14 @@ describe("confirmChange", () => {
 
     expect(result.status).toBe("success");
 
-    const changedWorkspace = await getWorkspaceData(
-      result.status === "success" ? { changeSetId: result.changeSetId } : {},
-    );
+    const changedWorkspace =
+      result.status === "success"
+        ? await getChangeWorkspaceData(result.changeSetId)
+        : null;
+    expect(changedWorkspace).not.toBeNull();
+    if (!changedWorkspace) {
+      throw new Error("Changed workspace was not found.");
+    }
     expect(changedWorkspace.selectedEntity.content).toBe(changedContent);
     expect(changedWorkspace.selectedEntity.currentVersionNumber).toBe(2);
     expect(changedWorkspace.changeResult?.beforeContent).toBe(target.content);
@@ -51,7 +60,7 @@ describe("confirmChange", () => {
   });
 
   it("同じbefore_versionからの二つの変更は一方だけを確定する", async () => {
-    const target = (await getWorkspaceData({})).selectedEntity;
+    const target = (await getInitialWorkspaceData()).selectedEntity;
 
     const results = await Promise.all([
       confirmChange({
@@ -76,7 +85,7 @@ describe("confirmChange", () => {
   });
 
   it("リセット後は初期状態だけが残り、古いURL用IDを再利用しない", async () => {
-    const target = (await getWorkspaceData({})).selectedEntity;
+    const target = (await getInitialWorkspaceData()).selectedEntity;
     const change = await confirmChange({
       businessEntityId: target.id,
       beforeVersionId: target.currentVersionId,
@@ -86,16 +95,28 @@ describe("confirmChange", () => {
 
     expect(change.status).toBe("success");
     const reset = await resetDemoState();
-    const resetWorkspace = await getWorkspaceData({
-      changeSetId: change.status === "success" ? change.changeSetId : undefined,
-    });
+    const resetWorkspace =
+      change.status === "success"
+        ? await getChangeWorkspaceData(change.changeSetId)
+        : null;
 
     expect(reset.initialEntityId).not.toBe(target.id);
-    expect(resetWorkspace.selectedEntity.name).toBe(INITIAL_DEMO_ENTITY_NAME);
-    expect(resetWorkspace.changeResult).toBeNull();
-    expect(resetWorkspace.notice).toMatch(/見つかりません/);
+    expect(resetWorkspace).toBeNull();
+    const initialWorkspace = await getInitialWorkspaceData();
+    expect(initialWorkspace.selectedEntity.name).toBe(INITIAL_DEMO_ENTITY_NAME);
     expect(await database.select().from(businessEntities)).toHaveLength(12);
     expect(await database.select().from(entityVersions)).toHaveLength(12);
     expect(await database.select().from(changeSets)).toHaveLength(0);
   });
 });
+
+async function getInitialWorkspaceData() {
+  const initialEntityId = await getInitialWorkspaceEntityId();
+  const workspace = await getEntityWorkspaceData(initialEntityId);
+
+  if (!workspace) {
+    throw new Error("Initial workspace entity was not found.");
+  }
+
+  return workspace;
+}

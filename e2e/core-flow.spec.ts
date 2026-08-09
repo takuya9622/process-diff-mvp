@@ -17,7 +17,24 @@ test("変更、差分、影響候補、経路、再表示、リセットを完�
   await expect(page.getByText(INITIAL_CONTENT.split("\n")[0])).toBeVisible();
   await expect(page.getByText("v1", { exact: true })).toBeVisible();
   await expect(
-    page.getByRole("button", { name: /経費規程/ }).first(),
+    page.getByRole("link", { name: /経費規程/ }).first(),
+  ).toBeVisible();
+
+  const initialEntityUrl = page.url();
+  await page
+    .getByRole("link", { name: /経費規程/ })
+    .first()
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "経費規程", level: 1 }),
+  ).toBeVisible();
+  await expect(page).toHaveURL(
+    /\/organizations\/shared-demo\/entities\/[0-9a-f-]+$/,
+  );
+  await page.goBack();
+  await expect(page).toHaveURL(initialEntityUrl);
+  await expect(
+    page.getByRole("heading", { name: "領収書提出ルール", level: 1 }),
   ).toBeVisible();
 
   await page
@@ -52,7 +69,9 @@ test("変更、差分、影響候補、経路、再表示、リセットを完�
       exact: true,
     })
     .click();
-  await expect(page).toHaveURL(/\?change=[0-9a-f-]+$/);
+  await expect(page).toHaveURL(
+    /\/organizations\/shared-demo\/changes\/[0-9a-f-]+$/,
+  );
 
   await expect(
     page.getByText("変更を保存しました", { exact: true }),
@@ -93,12 +112,11 @@ test("変更、差分、影響候補、経路、再表示、リセットを完�
   await resetDemo(page);
   await page.goto(changeResultUrl);
   await expect(
-    page.getByText(
-      "指定された変更結果は見つかりませんでした。サンプルがリセットされた可能性があります。",
-      { exact: true },
-    ),
+    page.getByRole("heading", {
+      name: "指定されたデータは見つかりませんでした",
+      level: 1,
+    }),
   ).toBeVisible();
-  await expect(page.getByText(INITIAL_CONTENT.split("\n")[0])).toBeVisible();
 });
 
 async function resetDemo(page: import("@playwright/test").Page) {
@@ -109,5 +127,7 @@ async function resetDemo(page: import("@playwright/test").Page) {
     await dialog.accept();
   });
   await Promise.all([dialogHandled, resetButton.click()]);
-  await expect(page).toHaveURL(/\?entity=[0-9a-f-]+$/);
+  await expect(page).toHaveURL(
+    /\/organizations\/shared-demo\/entities\/[0-9a-f-]+$/,
+  );
 }

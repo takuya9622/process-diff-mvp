@@ -1,14 +1,20 @@
+import type { MouseEventHandler } from "react";
+import Link from "next/link";
+
 import { EntityTypeBadge } from "@/components/general/entity-type-badge";
-import type { BusinessEntity } from "@/types/business-entity";
+import { createEntityPath } from "@/constants/routes";
+import type { WorkspaceNavigationEntity } from "@/types/workspace";
 
 export function EntityNavigation({
+  organizationSlug,
   entities,
   selectedEntityId,
-  onSelect,
+  onNavigate,
 }: {
-  entities: BusinessEntity[];
-  selectedEntityId: string;
-  onSelect: (entityId: string) => void;
+  organizationSlug: string;
+  entities: WorkspaceNavigationEntity[];
+  selectedEntityId: string | null;
+  onNavigate: MouseEventHandler<HTMLAnchorElement>;
 }) {
   return (
     <aside
@@ -36,11 +42,11 @@ export function EntityNavigation({
 
             return (
               <li key={entity.id}>
-                <button
-                  type="button"
+                <Link
+                  href={createEntityPath(organizationSlug, entity.id)}
                   aria-current={isSelected ? "page" : undefined}
-                  onClick={() => onSelect(entity.id)}
-                  className={`w-full rounded-2xl border px-3 py-3 text-left transition-colors focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:outline-none ${
+                  onClick={onNavigate}
+                  className={`block w-full rounded-2xl border px-3 py-3 text-left transition-colors focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:outline-none ${
                     isSelected
                       ? "border-action-primary bg-action-muted"
                       : "border-transparent hover:border-outline hover:bg-surface-muted"
@@ -60,7 +66,7 @@ export function EntityNavigation({
                       label={entity.typeLabel}
                     />
                   </span>
-                </button>
+                </Link>
               </li>
             );
           })}

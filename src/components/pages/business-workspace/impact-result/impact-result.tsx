@@ -1,25 +1,28 @@
-import { Button } from "@/components/general/button";
+import type { MouseEventHandler } from "react";
+import Link from "next/link";
+
 import { DiffView } from "@/components/general/diff-view";
 import { EntityTypeBadge } from "@/components/general/entity-type-badge";
 import { SectionHeading } from "@/components/general/section-heading";
+import { createEntityPath } from "@/constants/routes";
 import type { BusinessEntity } from "@/types/business-entity";
 import type { ChangeResult } from "@/types/change-set";
 import type { ImpactCandidate } from "@/types/impact";
 
 export function ImpactResult({
+  organizationSlug,
   entity,
   changeResult,
   selectedCandidateId,
   onSelectCandidate,
-  onOpenEntity,
-  onBackToEntity,
+  onNavigate,
 }: {
+  organizationSlug: string;
   entity: BusinessEntity;
   changeResult: ChangeResult;
   selectedCandidateId: string | null;
   onSelectCandidate: (entityId: string) => void;
-  onOpenEntity: (entityId: string) => void;
-  onBackToEntity: () => void;
+  onNavigate: MouseEventHandler<HTMLAnchorElement>;
 }) {
   const selectedCandidate =
     changeResult.impactCandidates.find(
@@ -40,9 +43,13 @@ export function ImpactResult({
         description={`${entity.name}の変更を保存しました。以下は、影響を断定する結果ではなく確認が必要な候補です。`}
         focusTarget
         action={
-          <Button variant="secondary" onClick={onBackToEntity}>
+          <Link
+            href={createEntityPath(organizationSlug, entity.id)}
+            onClick={onNavigate}
+            className={SECONDARY_LINK_CLASSES}
+          >
             現在の内容を見る
-          </Button>
+          </Link>
         }
       />
 
@@ -147,9 +154,10 @@ export function ImpactResult({
 
           {selectedCandidate ? (
             <PathDetail
+              organizationSlug={organizationSlug}
               originEntity={entity}
               candidate={selectedCandidate}
-              onOpenEntity={onOpenEntity}
+              onNavigate={onNavigate}
             />
           ) : null}
         </div>
@@ -211,13 +219,15 @@ function CandidateGroup({
 }
 
 function PathDetail({
+  organizationSlug,
   originEntity,
   candidate,
-  onOpenEntity,
+  onNavigate,
 }: {
+  organizationSlug: string;
   originEntity: BusinessEntity;
   candidate: ImpactCandidate;
-  onOpenEntity: (entityId: string) => void;
+  onNavigate: MouseEventHandler<HTMLAnchorElement>;
 }) {
   return (
     <div
@@ -274,16 +284,19 @@ function PathDetail({
         ))}
       </ol>
 
-      <Button
-        variant="secondary"
-        className="mt-6 w-full"
-        onClick={() => onOpenEntity(candidate.entity.id)}
+      <Link
+        href={createEntityPath(organizationSlug, candidate.entity.id)}
+        onClick={onNavigate}
+        className={`${SECONDARY_LINK_CLASSES} mt-6 w-full`}
       >
         {candidate.entity.name}の詳細を見る
-      </Button>
+      </Link>
     </div>
   );
 }
+
+const SECONDARY_LINK_CLASSES =
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-outline-strong bg-surface px-4 py-2.5 text-sm font-semibold text-content-primary transition-colors hover:border-action-primary hover:bg-action-muted focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:outline-none";
 
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat("ja-JP", {
