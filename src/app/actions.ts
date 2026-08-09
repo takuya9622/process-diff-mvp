@@ -17,7 +17,7 @@ export async function confirmChangeAction(
     const result = await confirmChange(input);
 
     if (result.status === "success") {
-      revalidatePath("/", "page");
+      revalidatePath("/organizations/[organizationSlug]", "layout");
     }
 
     return result;
@@ -34,7 +34,7 @@ export async function confirmChangeAction(
 export async function resetDemoAction(): Promise<ResetDemoResult> {
   try {
     const result = await resetDemoState();
-    revalidatePath("/", "page");
+    revalidatePath("/organizations/[organizationSlug]", "layout");
     return { status: "success", initialEntityId: result.initialEntityId };
   } catch (error) {
     console.error("Failed to reset the demo state.", error);

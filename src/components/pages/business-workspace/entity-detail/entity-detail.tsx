@@ -1,19 +1,25 @@
+import type { MouseEventHandler } from "react";
+import Link from "next/link";
+
 import { Button } from "@/components/general/button";
 import { EntityTypeBadge } from "@/components/general/entity-type-badge";
 import { SectionHeading } from "@/components/general/section-heading";
+import { createEntityPath } from "@/constants/routes";
 import type { BusinessEntity } from "@/types/business-entity";
 import type { DirectRelation } from "@/types/workspace";
 
 export function EntityDetail({
+  organizationSlug,
   entity,
   directRelations,
   onEdit,
-  onSelectEntity,
+  onNavigate,
 }: {
+  organizationSlug: string;
   entity: BusinessEntity;
   directRelations: DirectRelation[];
   onEdit: () => void;
-  onSelectEntity: (entityId: string) => void;
+  onNavigate: MouseEventHandler<HTMLAnchorElement>;
 }) {
   return (
     <div>
@@ -77,11 +83,11 @@ export function EntityDetail({
           </div>
           <div className="mt-4 space-y-3">
             {directRelations.map(({ relatedEntity, step }) => (
-              <button
+              <Link
                 key={step.relationId}
-                type="button"
-                onClick={() => onSelectEntity(relatedEntity.id)}
-                className="group w-full rounded-2xl border border-outline bg-surface p-4 text-left transition-colors hover:border-action-primary hover:bg-action-muted focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+                href={createEntityPath(organizationSlug, relatedEntity.id)}
+                onClick={onNavigate}
+                className="group block w-full rounded-2xl border border-outline bg-surface p-4 text-left transition-colors hover:border-action-primary hover:bg-action-muted focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:outline-none"
               >
                 <span className="flex items-center justify-between gap-3">
                   <span className="font-semibold text-content-primary">
@@ -94,7 +100,7 @@ export function EntityDetail({
                 <span className="mt-2 block text-xs leading-5 text-content-secondary">
                   {step.description}
                 </span>
-              </button>
+              </Link>
             ))}
           </div>
         </section>

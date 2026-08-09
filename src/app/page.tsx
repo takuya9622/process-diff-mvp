@@ -1,27 +1,10 @@
-import { BusinessWorkspace } from "@/components/pages/business-workspace/business-workspace";
-import { getWorkspaceData } from "@/lib/server/workspace-service";
+import { redirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
+import {
+  createOrganizationPath,
+  CURRENT_DEMO_ORGANIZATION_SLUG,
+} from "@/constants/routes";
 
-type HomeProps = {
-  searchParams: Promise<{
-    entity?: string | string[];
-    change?: string | string[];
-  }>;
-};
-
-export default async function Home({ searchParams }: HomeProps) {
-  const query = await searchParams;
-  const workspace = await getWorkspaceData({
-    entityId: firstQueryValue(query.entity),
-    changeSetId: firstQueryValue(query.change),
-  });
-  const workspaceKey =
-    workspace.changeResult?.id ?? workspace.selectedEntity.id;
-
-  return <BusinessWorkspace key={workspaceKey} workspace={workspace} />;
-}
-
-function firstQueryValue(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] : value;
+export default function Home() {
+  redirect(createOrganizationPath(CURRENT_DEMO_ORGANIZATION_SLUG));
 }
