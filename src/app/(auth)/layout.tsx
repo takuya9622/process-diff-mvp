@@ -13,7 +13,7 @@ export default function AuthLayout({
           <div>
             <p className="font-bold text-content-primary">Process Diff</p>
             <p className="text-xs text-content-tertiary">
-              変更と影響候補を組織ごとに管理
+              業務知識を理解し、必要なときは安全に変更
             </p>
           </div>
         </div>

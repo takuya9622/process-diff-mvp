@@ -32,7 +32,7 @@ export function WorkspaceHeader({
 
   return (
     <header className="border-b border-outline bg-surface/90 backdrop-blur">
-      <div className="mx-auto flex max-w-[92rem] items-center justify-between gap-4 px-5 py-4 sm:px-8">
+      <div className="mx-auto flex max-w-[92rem] flex-col gap-4 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-8">
         <div className="flex min-w-0 items-center gap-3">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-content-primary text-sm font-black tracking-tight text-surface">
             PD
@@ -43,18 +43,18 @@ export function WorkspaceHeader({
                 Process Diff
               </p>
               <span className="rounded-full bg-status-info-bg px-2 py-0.5 text-[0.65rem] font-bold tracking-[0.08em] text-status-info-content">
-                {roleLabel}
+                アクセス権限: {roleLabel}
               </span>
             </div>
             <p className="text-xs text-content-secondary">
-              {organizationName} · あなた: {userName}
+              業務知識ワークスペース · {organizationName} · あなた: {userName}
             </p>
-            <p className="hidden text-xs text-content-tertiary lg:block">
-              業務ルールを変えたときの確認候補を洗い出す
+            <p className="mt-0.5 text-xs text-content-tertiary">
+              組織の業務知識を一か所で理解し、必要なときは安全に変更できる
             </p>
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex w-full shrink-0 items-center justify-end gap-2 sm:w-auto">
           {onReset ? (
             <Button
               data-testid="reset-demo-button"

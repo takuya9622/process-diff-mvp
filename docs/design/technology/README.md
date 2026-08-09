@@ -319,7 +319,9 @@ PlaywrightをE2Eテストの選択肢とし、async Server ComponentsにはE2E�
 
 - DrizzleからPostgreSQLへの接続にはpostgres.jsを使い、変更確定はtransactionと
   `SELECT ... FOR UPDATE`で直列化する。
-- `content`は5,000文字以内のプレーンテキストとし、外部ライブラリを追加せず
-  Longest Common Subsequenceに基づく行単位差分を算出する。
+- `content`は20,000文字、500行以内のプレーンテキストとして保存する。通常表示では限定した
+  構造化記号をReact要素へ変換し、外部ライブラリやHTML実行は追加しない。
+- 差分はLongest Common Subsequenceに基づいて行単位で算出し、長い変更なし区間は表示時に
+  折りたたむ。500行の上限は二次時間の差分計算をMVPで安全に扱うために設ける。
 
 これらは中核技術の採用を変えずに実装または検証で判断できるため、現時点では固定しません。

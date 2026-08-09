@@ -1,4 +1,8 @@
-import { CHANGE_REASON_MAX_LENGTH, CONTENT_MAX_LENGTH } from "@/constants/demo";
+import {
+  CHANGE_REASON_MAX_LENGTH,
+  CONTENT_MAX_LENGTH,
+  CONTENT_MAX_LINES,
+} from "@/constants/demo";
 import {
   countUnicodeCodePoints,
   normalizeEditableText,
@@ -37,6 +41,14 @@ export function validateChangeInput(
       valid: false,
       field: "content",
       message: `内容は${CONTENT_MAX_LENGTH.toLocaleString("ja-JP")}文字以内で入力してください。`,
+    };
+  }
+
+  if (normalizedContent.split("\n").length > CONTENT_MAX_LINES) {
+    return {
+      valid: false,
+      field: "content",
+      message: `内容は${CONTENT_MAX_LINES.toLocaleString("ja-JP")}行以内で入力してください。`,
     };
   }
 

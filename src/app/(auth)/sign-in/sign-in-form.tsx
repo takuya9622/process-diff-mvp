@@ -44,7 +44,7 @@ export function SignInForm({ returnTo }: { returnTo: string }) {
           ログイン
         </h1>
         <p className="mt-2 text-sm leading-6 text-content-secondary">
-          あなたの組織のワークスペースを開きます。
+          あなたの組織の業務知識ワークスペースを開きます。
         </p>
       </div>
 

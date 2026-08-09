@@ -1,9 +1,8 @@
 import { expect, test } from "@playwright/test";
 
-const INITIAL_CONTENT =
-  "経費が3,000円以上の場合、領収書を添付する。\n紙の領収書は申請後30日間保管する。";
-const CHANGED_CONTENT =
-  "金額にかかわらず、すべての経費申請に領収書を添付する。\n紙の領収書は申請後30日間保管する。";
+const INITIAL_RULE_LINE = "経費が3,000円以上の場合、領収書を添付する。";
+const CHANGED_RULE_LINE =
+  "金額にかかわらず、すべての経費申請に領収書を添付する。";
 const PASSWORD = "process-diff-e2e-password";
 
 test("登録、組織作成、変更、再ログイン、組織境界、リセットを完了できる", async ({
@@ -30,12 +29,41 @@ test("登録、組織作成、変更、再ログイン、組織境界、リセ�
   const organizationUrl = new URL(page.url());
   const organizationSlug = organizationUrl.pathname.split("/")[2];
   await expect(page.getByText(userName, { exact: false })).toBeVisible();
-  await expect(page.getByText("オーナー", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("アクセス権限: オーナー", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(
+      "組織の業務知識を一か所で理解し、必要なときは安全に変更できる",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "経費精算", level: 2 }),
+  ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "領収書提出ルール", level: 1 }),
   ).toBeVisible();
-  await expect(page.getByText(INITIAL_CONTENT.split("\n")[0])).toBeVisible();
-  await expect(page.getByText("v1", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "目的", level: 2 }),
+  ).toBeVisible();
+  await expect(page.getByText(INITIAL_RULE_LINE)).toBeVisible();
+  await expect(page.getByText("v1", { exact: true })).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "変更前後を確認", level: 1 }),
+  ).toHaveCount(0);
+  await expect(page.getByText("変更履歴", { exact: true })).toHaveCount(0);
+  const knowledgeSearch = page.getByRole("searchbox", {
+    name: "業務知識を検索",
+  });
+  await knowledgeSearch.fill("マニュアル");
+  await expect(
+    page.getByRole("link", { name: "経費申請マニュアル", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "経費申請", exact: true }),
+  ).toHaveCount(0);
+  await knowledgeSearch.fill("");
   await expect(
     page.getByRole("link", { name: /経費規程/ }).first(),
   ).toBeVisible();
@@ -54,34 +82,39 @@ test("登録、組織作成、変更、再ログイン、組織境界、リセ�
   await page.goBack();
   await expect(page).toHaveURL(initialEntityUrl);
 
-  await page
-    .getByRole("button", { name: "この業務を変更する", exact: true })
-    .click();
+  await page.getByRole("button", { name: "変更案を作成", exact: true }).click();
+  await expect(
+    page.getByText("変更案 · ステップ 1 / 2", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "変更前後を確認", level: 1 }),
+  ).toHaveCount(0);
   await expect(
     page.getByText("変更内容はこの組織のメンバーだけに共有されます。", {
       exact: false,
     }),
   ).toBeVisible();
+  const contentEditor = page.getByLabel("業務知識の本文 必須", {
+    exact: true,
+  });
+  const currentContent = await contentEditor.inputValue();
+  await contentEditor.fill(
+    currentContent.replace(INITIAL_RULE_LINE, CHANGED_RULE_LINE),
+  );
   await page
-    .getByLabel("変更後の内容 必須", { exact: true })
-    .fill(CHANGED_CONTENT);
-  await page
-    .getByLabel("変更理由 任意", { exact: true })
+    .getByLabel("変更案の概要 任意", { exact: true })
     .fill("少額経費を含めて証憑の確認方法を統一するため");
-  await page
-    .getByRole("button", { name: "変更前後を確認する", exact: true })
-    .click();
+  await page.getByRole("button", { name: "差分を確認", exact: true }).click();
 
   await expect(
-    page.getByLabel(`削除: ${INITIAL_CONTENT.split("\n")[0]}`),
+    page.getByText("変更案 · ステップ 2 / 2", { exact: true }),
   ).toBeVisible();
-  await expect(
-    page.getByLabel(`追加: ${CHANGED_CONTENT.split("\n")[0]}`),
-  ).toBeVisible();
+  await expect(page.getByLabel(`削除: ${INITIAL_RULE_LINE}`)).toBeVisible();
+  await expect(page.getByLabel(`追加: ${CHANGED_RULE_LINE}`)).toBeVisible();
 
   await page
     .getByRole("button", {
-      name: "この内容で変更を確定する",
+      name: "変更を反映",
       exact: true,
     })
     .click();
@@ -92,11 +125,36 @@ test("登録、組織作成、変更、再ログイン、組織境界、リセ�
   await expect(
     page.getByText("変更を保存しました", { exact: true }),
   ).toBeVisible();
+  await expect(page.getByText("変更フロー完了", { exact: true })).toBeVisible();
   await expect(page.getByText(`${userName} ·`, { exact: false })).toBeVisible();
   await expect(page.getByText("直接 4件", { exact: false })).toBeVisible();
   await expect(page.getByText("2段階先 6件", { exact: false })).toBeVisible();
 
-  const candidateButtons = page.locator("button[aria-pressed]");
+  await page.setViewportSize({ width: 390, height: 844 });
+  const graph = page.getByTestId("impact-relation-graph");
+  await expect(graph).toBeVisible();
+  const mobileOverflow = await page.evaluate(() => {
+    const graphElement = document.querySelector<HTMLElement>(
+      '[data-testid="impact-relation-graph"]',
+    );
+
+    return {
+      pageOverflows:
+        document.documentElement.scrollWidth >
+        document.documentElement.clientWidth,
+      graphScrolls: graphElement
+        ? graphElement.scrollWidth > graphElement.clientWidth
+        : false,
+    };
+  });
+  expect(mobileOverflow).toEqual({
+    pageOverflows: false,
+    graphScrolls: true,
+  });
+
+  const candidateButtons = page.locator(
+    "button[aria-pressed]:not([aria-label])",
+  );
   await expect(candidateButtons).toHaveCount(10);
   await candidateButtons.filter({ hasText: "立替経費の支払い" }).click();
   const pathPanel = page.getByTestId("impact-path-detail");
@@ -107,6 +165,7 @@ test("登録、組織作成、変更、再ログイン、組織境界、リセ�
       level: 3,
     }),
   ).toBeVisible();
+  await page.setViewportSize({ width: 1280, height: 720 });
 
   const changeResultUrl = page.url();
   await page.reload();
@@ -114,6 +173,18 @@ test("登録、組織作成、変更、再ログイン、組織境界、リセ�
   await expect(
     page.getByText("変更を保存しました", { exact: true }),
   ).toBeVisible();
+  await page
+    .getByRole("link", { name: "現在の業務知識へ戻る", exact: true })
+    .click();
+  await expect(page).toHaveURL(initialEntityUrl);
+  await expect(
+    page.getByRole("heading", { name: "目的", level: 2 }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "変更前後を確認", level: 1 }),
+  ).toHaveCount(0);
+  await page.goBack();
+  await expect(page).toHaveURL(changeResultUrl);
 
   await page.goto("/organizations/not-my-organization");
   await expect(

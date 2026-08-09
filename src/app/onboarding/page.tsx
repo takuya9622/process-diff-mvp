@@ -18,11 +18,10 @@ export default async function OnboardingPage() {
           Initial setup
         </p>
         <h1 className="mt-2 text-3xl font-semibold text-content-primary">
-          組織ワークスペースを作成
+          業務知識ワークスペースを作成
         </h1>
         <p className="mt-3 text-sm leading-7 text-content-secondary">
-          Process
-          Diffで変更対象と影響候補を共有する単位です。MVPでは1アカウントにつき1組織を作成できます。
+          組織の業務知識を一か所で参照し、必要なときに安全に変更するためのスペースです。MVPでは1アカウントにつき1組織を作成できます。
         </p>
         <OnboardingForm defaultName={`${session.user.name}の組織`} />
       </section>

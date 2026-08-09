@@ -6,7 +6,7 @@ export function WorkspaceLoading() {
         className="rounded-3xl border border-outline bg-surface px-8 py-7 shadow-panel"
       >
         <p className="text-sm font-semibold text-content-primary">
-          業務スペースを読み込んでいます
+          業務知識ワークスペースを読み込んでいます
         </p>
         <div className="mt-4 h-1.5 w-56 overflow-hidden rounded-full bg-surface-strong">
           <div className="h-full w-1/2 animate-pulse rounded-full bg-action-primary" />
