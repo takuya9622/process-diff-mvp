@@ -15,6 +15,7 @@
 | この文書 | MVP全体の技術構成と各技術の利用境界を確認するとき | 初期決定 |
 | [ローカル開発・デプロイ設計](local-development-and-deployment.md) | Docker環境、環境変数、Vercel Git連携を設定・変更するとき | 初期決定 |
 | [Linter・Formatter設計](linting-and-formatting.md) | ESLint、Prettier、VS Code連携を設定・変更するとき | 初期決定 |
+| [コーディング規約](coding-standards/README.md) | Next.jsとCSSの責務、配置、コメント、分割基準を確認するとき | 初期決定 |
 
 この文書では、要件定義、論理データフロー、テーブル設計を実装するための技術スタックと
 利用境界を定義します。

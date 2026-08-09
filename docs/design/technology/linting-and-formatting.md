@@ -11,11 +11,15 @@
 この文書では、[MVP技術選定](README.md)で採用したLinterとFormatterの構成、責務、
 開発時の実行方法を定義します。
 
+この文書は自動検査と自動整形だけを扱います。コードの責務、配置、コメント、ファイル分割など
+人が判断する規則は[コーディング規約](coding-standards/README.md)を参照してください。
+
 ## 2. 責務の分離
 
 | 責務 | 採用技術 | 運用方針 |
 |---|---|---|
 | 品質と不具合の検出 | ESLint | Next.js、React、React Hooks、TypeScriptの規則を検査する |
+| `any`と無効化コメントの検査 | typescript-eslint、eslint-plugin-eslint-comments | 明示的な`any`を禁止し、例外理由のないESLint無効化を拒否する |
 | コードと設定の整形 | Prettier | TypeScript、TSX、JSON、CSSなどの表記を統一する |
 | Tailwind classの並び順 | prettier-plugin-tailwindcss | Tailwind推奨順へ自動整形する |
 | ESLintとの競合回避 | eslint-config-prettier | Prettierと競合するESLintの整形規則を無効化する |
@@ -28,6 +32,13 @@ ESLintは不具合につながる記述やフレームワーク規約の違反�
 - ESLint CLIとflat config形式の`eslint.config.mjs`を使用する。
 - `eslint-config-next/core-web-vitals`を基礎とする。
 - TypeScript用の`eslint-config-next/typescript`を併用する。
+- `@typescript-eslint/no-explicit-any`をerrorとし、明示的な`any`を禁止する。安全に自動修正できる
+  候補として`unknown`を提示できるよう、`fixToUnknown`を有効にする。
+- `any`を例外的に使う場合は、対象行だけでESLint規則を無効化し、`--`以降に理由を記載する。
+  詳細な判断基準は[Next.jsコーディング規約](coding-standards/nextjs.md)に従う。
+- `@eslint-community/eslint-plugin-eslint-comments`の`require-description`で、説明のない
+  ESLint directive commentをerrorにする。
+- `reportUnusedDisableDirectives`をerrorにし、不要になった無効化コメントを残さない。
 - `eslint-config-prettier/flat`を設定配列の後方へ追加し、整形規則の競合を防ぐ。
 - 初期段階では、用途が重複する包括的なESLint pluginやstyle rule集を追加しない。
 - 例外規則はファイル全体へ広げず、必要な理由と最小の対象範囲を明示する。
