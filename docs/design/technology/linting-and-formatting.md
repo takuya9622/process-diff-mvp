@@ -16,7 +16,7 @@
 | 責務 | 採用技術 | 運用方針 |
 |---|---|---|
 | 品質と不具合の検出 | ESLint | Next.js、React、React Hooks、TypeScriptの規則を検査する |
-| コードと文書の整形 | Prettier | TypeScript、TSX、JSON、CSS、Markdownなどの表記を統一する |
+| コードと設定の整形 | Prettier | TypeScript、TSX、JSON、CSSなどの表記を統一する |
 | Tailwind classの並び順 | prettier-plugin-tailwindcss | Tailwind推奨順へ自動整形する |
 | ESLintとの競合回避 | eslint-config-prettier | Prettierと競合するESLintの整形規則を無効化する |
 
@@ -45,8 +45,12 @@ Next.jsの[公式ESLint構成](https://nextjs.org/docs/app/api-reference/config/
 - Tailwind Labsの
   [prettier-plugin-tailwindcss](https://github.com/tailwindlabs/prettier-plugin-tailwindcss)を使い、
   Tailwind classの順序を手作業で管理しない。
-- `.prettierignore`では`.next`、`coverage`などの生成物を除外する。
+- `.prettierignore`では`.next`、`coverage`などの生成物と`docs`を除外する。
 - `eslint-plugin-prettier`は導入せず、PrettierをESLintの規則として実行しない。
+
+`docs`はトークン効率を考慮した独自の分割・改行基準を持ち、PrettierによるMarkdown tableの
+機械的な再整形が大きな無関係差分を生むため、Prettierの対象外とします。文書は
+[設計ドキュメントの管理方針](../../README.md)に従って確認します。
 
 Prettierの[Linter連携ガイド](https://prettier.io/docs/integrating-with-linters.html)は、
 整形をPrettier、コード品質をLinterへ分け、競合規則を
