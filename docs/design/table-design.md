@@ -17,7 +17,8 @@
 
 サービスの機能は[要件定義](../requirements/README.md)、データの意味は
 [ドメインモデルと影響判定要件](../requirements/domain-and-impact.md)、処理との関係は
-[論理データフロー設計](data-flow.md)を参照してください。
+[論理データフロー設計](data-flow.md)、物理実装の方針は
+[MVP技術選定](technology/README.md)を参照してください。
 
 ## 2. 設計状態の区分
 
