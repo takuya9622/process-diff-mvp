@@ -13,6 +13,7 @@
 | 文書 | 読む場面 | 状態 |
 |---|---|---|
 | この文書 | MVP全体の技術構成と各技術の利用境界を確認するとき | 初期決定 |
+| [ローカル開発・デプロイ設計](local-development-and-deployment.md) | Docker環境、環境変数、Vercel Git連携を設定・変更するとき | 初期決定 |
 | [Linter・Formatter設計](linting-and-formatting.md) | ESLint、Prettier、VS Code連携を設定・変更するとき | 初期決定 |
 
 この文書では、要件定義、論理データフロー、テーブル設計を実装するための技術スタックと
@@ -44,6 +45,7 @@ MVPの検証中に変更できる設計としますが、依存技術を変更�
 | データベース | Neon Serverless Postgres | 初期採用 | 現在状態、関係、バージョン、変更単位 |
 | ORM・マイグレーション | Drizzle ORM・Drizzle Kit | 初期採用 | 型付きクエリ、スキーマ、SQL migration |
 | パッケージ管理 | npm | 採用 | 依存関係とlockfileの管理 |
+| ローカル実行環境 | Docker Compose | 採用 | Next.jsとPostgreSQLの再現可能な開発環境 |
 | Linter | ESLint・eslint-config-next | 採用 | Next.js、React、TypeScriptの問題検出 |
 | Formatter | Prettier・prettier-plugin-tailwindcss | 採用 | コードと文書の整形、Tailwind classの並び順統一 |
 | ローカルテスト | Vitest・React Testing Library・Playwright | 初期採用 | ドメインロジックと中核フローの検証 |
@@ -73,6 +75,7 @@ Vercel Hobbyは無料ですが、[公式ドキュメント](https://vercel.com/d
 
 - 静的書き出しではなく、Vercel上でNext.jsのサーバー機能を利用する。
 - GitHubリポジトリとVercelプロジェクトを接続し、`main`を本番デプロイ対象とする。
+- `main`への更新をVercelのGit連携で自動デプロイし、別のデプロイ用CIは追加しない。
 - Preview DeploymentはPull Requestの画面確認に利用できるが、CIの必須化は行わない。
 - Vercel Functionのファイルシステムやプロセスメモリを永続化先として使わない。
 - Functionとデータベースは、選択可能な範囲で近いリージョンへ配置する。
@@ -80,6 +83,10 @@ Vercel Hobbyは無料ですが、[公式ドキュメント](https://vercel.com/d
 Next.jsのサーバー機能を使う理由は、静的書き出しではServer Actionsや動的なRoute Handlersを
 利用できないためです。Vercel Functionsではリクエスト間でメモリを共有できず、ファイルへの
 永続的な書き込みも前提にできません。
+
+ローカルではDocker Composeを使用し、VercelにはコンテナイメージではなくGitHub上の
+Next.jsプロジェクトを直接デプロイします。環境の分担、環境変数、ブランチとデプロイの
+対応は[ローカル開発・デプロイ設計](local-development-and-deployment.md)で定義します。
 
 ## 5. Next.js内の責務分担
 
