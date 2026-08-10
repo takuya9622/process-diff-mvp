@@ -35,7 +35,24 @@ ServerとClientの境界は
 ```text
 src/
 ├── app/
+│   ├── (auth)/
+│   │   ├── sign-in/page.tsx
+│   │   └── sign-up/page.tsx
 │   ├── api/
+│   │   ├── auth/[...all]/route.ts
+│   │   └── health/route.ts
+│   ├── onboarding/page.tsx
+│   ├── organizations/[organizationSlug]/
+│   │   ├── layout.tsx
+│   │   ├── page.tsx
+│   │   ├── loading.tsx
+│   │   ├── not-found.tsx
+│   │   ├── entities/[businessEntityId]/
+│   │   │   ├── page.tsx
+│   │   │   └── loading.tsx
+│   │   └── changes/[changeSetId]/
+│   │       ├── page.tsx
+│   │       └── loading.tsx
 │   ├── layout.tsx
 │   ├── page.tsx
 │   ├── loading.tsx
@@ -81,6 +98,9 @@ src/
 - `page.tsx`は入力となるURL状態とサーバーデータを取得し、ページ固有コンポーネントを
   組み立てる。
 - `layout.tsx`はルート階層で共有するUI、metadata、fontなどを組み立てる。
+- `(auth)`のようなroute groupは、URLを変えずにlayoutや責務を分ける場合だけ使う。
+- URLで識別・共有する主リソースには`[organizationSlug]`、`[businessEntityId]`のような
+  dynamic segmentを使い、一つの`page.tsx`へqueryで複数リソースを切り替える構造にしない。
 - `loading.tsx`、`error.tsx`、`not-found.tsx`は、利用者が回復方法を判断できる単位で置く。
 - `route.ts`は外部クライアント、Webhook、Health checkなどHTTP境界が必要な場合だけ使う。
 - App Routerの予約ファイル以外をroute segmentへ置く場合は、`_components`や`_lib`などの
@@ -197,13 +217,20 @@ const rawPayload: any = legacySdk.read();
 - Node.js Runtimeを標準とし、具体的な遅延要件と依存互換性を確認できない限りEdge Runtimeを
   指定しない。
 
-## 9. SPAの状態管理とURL
+## 9. Routing、URL、Client state
 
-- 再読み込みや共有で復元する選択中の業務要素と確定済み変更結果はURLで表現する。
-- 編集中の内容、差分確認、開閉状態など一時的なUI状態はClient Component内に保持する。
+- 組織、選択中の業務要素、確定済み変更結果など、URL共有、再読み込み、戻る・進むで
+  復元する主リソースはdynamic route segmentで表現する。
+- 絞り込み、並べ替え、表示tabなど、主リソースを変えない任意の表示条件だけをsearch paramsで
+  表現する。主リソースのIDをsearch paramsへ置かない。
+- 編集中の内容、変更理由、差分確認、dialogの開閉など、未確定で一時的なUI状態はClient
+  Component内に保持する。
 - URLから導出できる状態を別のstateへ複製しない。
 - Propsまたは既存stateから計算できる値を`useEffect`で同期せず、render中に導出する。
-- Browser Historyへ残す必要がない細かな表示状態まで、クエリへ追加しない。
+- Browser Historyへ残す必要がない細かな表示状態まで、search paramsへ追加しない。
+- 共有シェルと認可境界は共通の`layout.tsx`へ置き、子routeの切り替えで再作成しない。
+- 内部の通常移動は`Link`を使い、処理結果によって移動先が決まる場合だけ`redirect()`または
+  `useRouter`を使う。
 - `useSearchParams`を使うClient Componentは、静的表示全体をClient renderingへ移行させないよう
   適切なSuspense境界の内側へ置く。
 
@@ -213,8 +240,10 @@ const rawPayload: any = legacySdk.read();
 - 想定内の入力エラーや更新失敗は、利用者が修正または再試行できる型付き結果として扱う。
 - 予期しない例外を握りつぶさず、最も近い`error.tsx`で回復操作を示す。
 - 対象が存在しない場合は`notFound()`と`not-found.tsx`を使用する。
+- 認可対象の存在を隠す必要がある場合も、権限エラーではなく`notFound()`で同じ応答にする。
 - `redirect()`、`notFound()`などNext.jsが内部的にthrowするNavigation APIを、一般的な
   `try-catch`で握りつぶさない。
+- dynamic routeには必要な粒度で`loading.tsx`を置き、共有layoutを残したまま遷移状態を示す。
 - 内部遷移は`Link`またはNext.jsのNavigation APIを使い、通常のリンクをbuttonのclickだけで
   再現しない。
 
@@ -233,5 +262,6 @@ const rawPayload: any = legacySdk.read();
 - `page.tsx`または一つのClient Componentへ責務と状態が集中していないか。
 - 手書きの共有型が`src/types`、意味を持つ値が適切なscopeの定数になっているか。
 - ServerとClientの境界が必要な位置まで狭められているか。
+- 主リソースがqueryではなく適切なroute segmentで表現されているか。
 - URL、Server data、Client stateに同じ状態を重複して持っていないか。
 - 想定内エラーと予期しない例外に、それぞれ回復可能な扱いがあるか。

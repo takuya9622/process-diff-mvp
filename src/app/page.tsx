@@ -1,27 +1,25 @@
-import { BusinessWorkspace } from "@/components/pages/business-workspace/business-workspace";
-import { getWorkspaceData } from "@/lib/server/workspace-service";
+import { redirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
+import {
+  createOrganizationPath,
+  ONBOARDING_PATH,
+  SIGN_IN_PATH,
+} from "@/constants/routes";
+import {
+  getCurrentOrganizationMemberships,
+  getSession,
+} from "@/lib/server/auth/session";
 
-type HomeProps = {
-  searchParams: Promise<{
-    entity?: string | string[];
-    change?: string | string[];
-  }>;
-};
+export default async function Home() {
+  if (!(await getSession())) {
+    redirect(SIGN_IN_PATH);
+  }
 
-export default async function Home({ searchParams }: HomeProps) {
-  const query = await searchParams;
-  const workspace = await getWorkspaceData({
-    entityId: firstQueryValue(query.entity),
-    changeSetId: firstQueryValue(query.change),
-  });
-  const workspaceKey =
-    workspace.changeResult?.id ?? workspace.selectedEntity.id;
+  const [membership] = await getCurrentOrganizationMemberships();
 
-  return <BusinessWorkspace key={workspaceKey} workspace={workspace} />;
-}
+  if (!membership) {
+    redirect(ONBOARDING_PATH);
+  }
 
-function firstQueryValue(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] : value;
+  redirect(createOrganizationPath(membership.organizationSlug));
 }

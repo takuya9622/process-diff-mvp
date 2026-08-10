@@ -4,8 +4,8 @@
 
 | 項目 | 内容 |
 |---|---|
-| 文書状態 | MVP実装済み |
-| 対象 | MVPのアプリケーション、バックエンド、永続化、UI基盤 |
+| 文書状態 | 認証基盤を含む現行MVPへ反映済み |
+| 対象 | MVPのアプリケーション、認証、バックエンド、永続化、UI基盤 |
 | 最終更新日 | 2026-08-09 |
 
 ### 1.1 文書構成
@@ -45,13 +45,14 @@ MVPの検証中に変更できる設計としますが、依存技術を変更�
 | アニメーション | Motion | 採用 | 状態遷移、差分、影響経路の視覚表現 |
 | データベース | Neon Serverless Postgres | 初期採用 | 現在状態、関係、バージョン、変更単位 |
 | ORM・マイグレーション | Drizzle ORM・Drizzle Kit | 初期採用 | 型付きクエリ、スキーマ、SQL migration |
+| 認証・組織 | Better Auth・organization plugin | 追加採用 | email/password認証、session、組織、membership、静的権限 |
 | パッケージ管理 | npm | 採用 | 依存関係とlockfileの管理 |
 | ローカル実行環境 | Docker Compose | 採用 | Next.jsとPostgreSQLの再現可能な開発環境 |
 | Linter | ESLint・eslint-config-next | 採用 | Next.js、React、TypeScriptの問題検出 |
 | Formatter | Prettier・prettier-plugin-tailwindcss | 採用 | コードと文書の整形、Tailwind classの並び順統一 |
 | ローカルテスト | Vitest・React Testing Library・Playwright | 初期採用 | ドメインロジックと中核フローの検証 |
 
-認証、本格的な権限管理、別バックエンド、メッセージキュー、キャッシュサーバー、
+OAuth、SSO、MFA、動的RBAC、別バックエンド、メッセージキュー、キャッシュサーバー、
 リアルタイム通信基盤はMVPへ導入しません。
 
 ## 4. Vercelの採用条件
@@ -127,19 +128,41 @@ Server Actionsは画面専用の更新境界として使います。外部クラ
 必要になった場合だけ、`app/api`配下へRoute Handlersを追加します。画面ごとに同じ処理を
 Server ActionとRoute Handlerへ重複実装しません。
 
-### 5.4 SPAとしての画面遷移
+### 5.4 App RouterによるSPA遷移
 
-MVPは、`/`を入口とする一つのアプリケーションシェル内で、業務要素の参照、編集、
-差分確認、変更確定、影響候補の確認を完了するSPAとして実装します。中核フローでは
-ブラウザのページ全体を再読み込みせず、メインワークスペースの状態を切り替えます。
+MVPはNext.js App Routerのfile-based routingを使用します。組織を
+`/organizations/[organizationSlug]`、業務要素を
+`/organizations/[organizationSlug]/entities/[businessEntityId]`、確定済みの変更結果を
+`/organizations/[organizationSlug]/changes/[changeSetId]`のdynamic route segmentで表現します。
+組織配下の`layout.tsx`を共有アプリケーションシェルとし、`Link`によるclient-side
+transitionでページ全体を再読み込みせずに子routeを切り替えます。
 
-SPAであることを理由に、画面全体を一つのClient Componentにしません。初期表示と確定済み
-データはServer Componentsで取得し、業務要素の選択、未確定の変更案、差分確認など、
-操作に必要な範囲だけをClient Componentsで管理します。
+SPAであることを理由に、画面全体を一つのClient Componentにしません。routeごとの初期表示と
+確定済みデータはServer Componentsで取得し、未確定の変更案、差分確認、ダイアログなど、
+操作中だけ必要な範囲をClient Componentsで管理します。dynamic routeには必要に応じて
+`loading.tsx`を置き、共有layoutを維持したまま遷移中の状態を示します。
 
-選択中の業務要素と確定済みの変更結果はURLで再現できるようにし、未確定の編集内容は
-ブラウザ内状態だけに保持します。画面状態、URLの候補、ブラウザの戻る・進むの扱いは
+search paramsは絞り込み、並べ替え、表示tabなど、リソースを識別しない任意の表示条件にだけ
+使用します。未確定の編集内容はブラウザ内状態だけに保持します。routeと状態の境界、
+ブラウザの戻る・進むの扱いは
 [MVP画面構成とユーザーフロー](../screens-and-user-flow.md)で定義します。
+
+### 5.5 Better Authの利用境界
+
+Better Auth core、Drizzle adapter、organization pluginを同じNext.js applicationへ追加します。
+認証方式はemail/passwordだけを有効にします。認証・組織の詳細は
+[認証・組織ワークスペース設計](../authentication-and-organization.md)を正本とします。
+
+- `/api/auth/[...all]/route.ts`だけをBetter AuthのRoute Handlerとして公開する。
+- Server ComponentsとServer Actionsは、`headers()`からsessionを検証する。
+- organization pluginのmodelを`organizations`と`organization_memberships`へ対応付ける。
+- 静的Access Controlで`owner`、`editor`、`viewer`を定義し、動的roleは使用しない。
+- protected layoutは画面遷移を制御するが、取得・更新ごとの認可を省略しない。
+- `proxy.ts`を使用する場合もcookieによる事前redirectだけとし、認可境界にしない。
+
+Server Componentsは認可後にservice層を直接呼び、認証済み画面から同一applicationのRoute
+HandlerをHTTP経由で呼びません。Server Actionsはclientから渡されたuser、role、organization
+IDを信頼せず、sessionとmembershipから確定します。
 
 ## 6. 永続化とデータ処理
 
@@ -180,6 +203,7 @@ Drizzle実装を使用でき、変更確定時のtransactionと行lockを一つ�
 |---|---|---|
 | 現在の業務グラフ | Neon Postgres | 保持する |
 | バージョンと変更単位 | Neon Postgres | 保持する |
+| 利用者、session、組織、membership | Neon Postgres | 保持する |
 | 未確定の変更案 | Client Componentの状態 | 保持しない |
 | 差分 | 変更前後の内容から算出 | 再算出する |
 | 影響候補と関係経路 | 確定済みグラフから算出 | 再算出する |
@@ -188,10 +212,10 @@ Drizzle実装を使用でき、変更確定時のtransactionと行lockを一つ�
 確定前の入力はブラウザ更新で失われてもよいものとし、自動保存は追加しません。確定済みの
 変更内容と履歴はデータベースへ保存し、ブラウザ更新後も確認できるようにします。
 
-匿名利用者ごとにサンプル状態を分離する要件は、現時点では追加しません。初期MVPは一つの
-共有サンプル状態を前提とします。同じ要素への古いversionを基準とした更新は競合として
-拒否し、リセット時は履歴を削除してseedから初期状態を再作成します。状態分離へ移行する条件、
-画面上の注意、入力上限を含む詳細は[公開デモの状態管理](../demo-state.md)で定義します。
+業務グラフ、version、変更単位はorganization IDで分離します。同じ組織の同じ要素への古い
+versionを基準とした更新は競合として拒否し、リセット時は現在の組織の履歴だけを削除して
+seedから初期状態を再作成します。詳細は
+[組織別サンプル状態の管理](../demo-state.md)で定義します。
 
 ## 7. CSS選定
 
@@ -261,6 +285,8 @@ GitHub ActionsによるCIは導入しませんが、ローカルで再実行で�
   振る舞いを確認する必要がある箇所だけに使う。
 - Playwrightで、一覧、編集、差分確認、変更確定、影響候補、リセットまでの中核フローを
   E2Eテストする。
+- Playwrightの独立browser contextを使い、サインアップ、サインイン、onboarding、組織分離、
+  role別権限をE2Eテストする。
 - async Server Componentsは単体テストで無理に再現せず、PlaywrightのE2Eで確認する。
 - 大量のsnapshot testは作成せず、利用者が認識する結果と操作を検証する。
 
@@ -282,7 +308,7 @@ PlaywrightをE2Eテストの選択肢とし、async Server ComponentsにはE2E�
 - Reduxなどのグローバル状態管理ライブラリ
 - Redis、メッセージキュー、常駐Worker
 - WebSocketを使うリアルタイム同期機能
-- 認証・認可サービス
+- 外部IdP、OAuth、SSO、MFA、動的RBAC
 - 本格的な監視、分散トレーシング、外部ログ基盤
 - GitHub ActionsによるCI
 - ESLintと役割が重複するstyle rule集、eslint-plugin-prettier
@@ -293,7 +319,9 @@ PlaywrightをE2Eテストの選択肢とし、async Server ComponentsにはE2E�
 
 - DrizzleからPostgreSQLへの接続にはpostgres.jsを使い、変更確定はtransactionと
   `SELECT ... FOR UPDATE`で直列化する。
-- `content`は5,000文字以内のプレーンテキストとし、外部ライブラリを追加せず
-  Longest Common Subsequenceに基づく行単位差分を算出する。
+- `content`は20,000文字、500行以内のプレーンテキストとして保存する。通常表示では限定した
+  構造化記号をReact要素へ変換し、外部ライブラリやHTML実行は追加しない。
+- 差分はLongest Common Subsequenceに基づいて行単位で算出し、長い変更なし区間は表示時に
+  折りたたむ。500行の上限は二次時間の差分計算をMVPで安全に扱うために設ける。
 
 これらは中核技術の採用を変えずに実装または検証で判断できるため、現時点では固定しません。

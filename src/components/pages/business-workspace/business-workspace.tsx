@@ -1,16 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import type { MouseEventHandler } from "react";
 import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
 
-import { confirmChangeAction, resetDemoAction } from "@/app/actions";
+import { confirmChangeAction } from "@/app/actions";
 import { ChangeEditor } from "@/components/pages/business-workspace/change-editor/change-editor";
 import { DiffReview } from "@/components/pages/business-workspace/diff-review/diff-review";
 import { EntityDetail } from "@/components/pages/business-workspace/entity-detail/entity-detail";
-import { EntityNavigation } from "@/components/pages/business-workspace/entity-navigation/entity-navigation";
 import { ImpactResult } from "@/components/pages/business-workspace/impact-result/impact-result";
-import { WorkspaceHeader } from "@/components/pages/business-workspace/workspace-header";
+import { useWorkspaceRouteState } from "@/components/pages/business-workspace/workspace-shell";
+import { createChangePath } from "@/constants/routes";
 import { validateChangeInput } from "@/lib/domain/input-validation";
 import { createLineDiff, summarizeLineDiff } from "@/lib/domain/line-diff";
 import type { BusinessEntity } from "@/types/business-entity";
@@ -18,7 +19,15 @@ import type { WorkspaceData } from "@/types/workspace";
 
 type WorkspaceMode = "detail" | "edit" | "review" | "result";
 
-export function BusinessWorkspace({ workspace }: { workspace: WorkspaceData }) {
+export function BusinessWorkspace({
+  organizationSlug,
+  canChange,
+  workspace,
+}: {
+  organizationSlug: string;
+  canChange: boolean;
+  workspace: WorkspaceData;
+}) {
   const router = useRouter();
   const reduceMotion = useReducedMotion();
   const workspacePanelRef = useRef<HTMLDivElement>(null);
@@ -38,10 +47,12 @@ export function BusinessWorkspace({ workspace }: { workspace: WorkspaceData }) {
     message: string;
   } | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [resetError, setResetError] = useState<string | null>(null);
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(
     workspace.changeResult?.impactCandidates[0]?.entity.id ?? null,
   );
+  const hasUnconfirmedDraft =
+    (mode === "edit" || mode === "review") &&
+    (draftContent !== baseEntity.content || draftReason.trim().length > 0);
   const draftDiff = useMemo(
     () => createLineDiff(baseEntity.content, draftContent),
     [baseEntity.content, draftContent],
@@ -50,6 +61,8 @@ export function BusinessWorkspace({ workspace }: { workspace: WorkspaceData }) {
     () => summarizeLineDiff(draftDiff),
     [draftDiff],
   );
+
+  useWorkspaceRouteState(workspace.selectedEntity.id, hasUnconfirmedDraft);
 
   useEffect(() => {
     workspacePanelRef.current
@@ -95,7 +108,7 @@ export function BusinessWorkspace({ workspace }: { workspace: WorkspaceData }) {
   function confirmDraft() {
     setActionError(null);
     startTransition(async () => {
-      const result = await confirmChangeAction({
+      const result = await confirmChangeAction(organizationSlug, {
         businessEntityId: baseEntity.id,
         beforeVersionId: baseEntity.currentVersionId,
         content: draftContent,
@@ -103,7 +116,7 @@ export function BusinessWorkspace({ workspace }: { workspace: WorkspaceData }) {
       });
 
       if (result.status === "success") {
-        router.push(`/?change=${encodeURIComponent(result.changeSetId)}`);
+        router.push(createChangePath(organizationSlug, result.changeSetId));
         return;
       }
 
@@ -131,148 +144,75 @@ export function BusinessWorkspace({ workspace }: { workspace: WorkspaceData }) {
     });
   }
 
-  function navigateToEntity(entityId: string) {
-    if (entityId === workspace.selectedEntity.id && mode === "detail") {
-      return;
-    }
-
+  const handleEntityNavigate: MouseEventHandler<HTMLAnchorElement> = (
+    event,
+  ) => {
     if (
-      hasUnconfirmedDraft() &&
+      hasUnconfirmedDraft &&
       !window.confirm("未確定の変更案を破棄して移動しますか？")
     ) {
-      return;
+      event.preventDefault();
     }
-
-    router.push(`/?entity=${encodeURIComponent(entityId)}`);
-  }
-
-  function resetDemo() {
-    const confirmed = window.confirm(
-      "共有サンプルのすべての変更内容と変更履歴を削除し、初期状態へ戻します。続けますか？",
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    setResetError(null);
-    startTransition(async () => {
-      const result = await resetDemoAction();
-
-      if (result.status === "success") {
-        router.push(`/?entity=${encodeURIComponent(result.initialEntityId)}`);
-        return;
-      }
-
-      setResetError(result.message);
-    });
-  }
-
-  function hasUnconfirmedDraft() {
-    return (
-      (mode === "edit" || mode === "review") &&
-      (draftContent !== baseEntity.content || draftReason.trim().length > 0)
-    );
-  }
+  };
 
   return (
-    <div className="min-h-screen">
-      <WorkspaceHeader onReset={resetDemo} isPending={isPending} />
-      <main
-        aria-busy={isPending}
-        className="mx-auto max-w-[92rem] px-4 py-5 sm:px-6 sm:py-7 lg:px-8"
+    <div ref={workspacePanelRef} className="p-5 sm:p-7 lg:p-9">
+      <motion.div
+        key={mode}
+        initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: reduceMotion ? 0 : 0.2, ease: "easeOut" }}
       >
-        {workspace.notice ? (
-          <div
-            role="status"
-            className="mb-5 rounded-2xl border border-status-info-content/20 bg-status-info-bg px-4 py-3 text-sm text-status-info-content"
-          >
-            {workspace.notice}
-          </div>
-        ) : null}
-        {resetError ? (
-          <div
-            role="alert"
-            className="mb-5 rounded-2xl border border-status-danger-content/20 bg-status-danger-bg px-4 py-3 text-sm font-semibold text-status-danger-content"
-          >
-            {resetError}
-          </div>
-        ) : null}
-
-        <div className="grid items-start gap-5 lg:grid-cols-[19rem_minmax(0,1fr)]">
-          <EntityNavigation
-            entities={workspace.entities}
-            selectedEntityId={workspace.selectedEntity.id}
-            onSelect={navigateToEntity}
+        {mode === "detail" ? (
+          <EntityDetail
+            organizationSlug={organizationSlug}
+            entity={workspace.selectedEntity}
+            directRelations={workspace.directRelations}
+            onEdit={canChange ? beginEdit : undefined}
+            onNavigate={handleEntityNavigate}
           />
-          <div
-            ref={workspacePanelRef}
-            className="min-w-0 rounded-3xl border border-outline bg-surface p-5 shadow-panel sm:p-7 lg:p-9"
-          >
-            <motion.div
-              key={mode}
-              initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: reduceMotion ? 0 : 0.2, ease: "easeOut" }}
-            >
-              {mode === "detail" ? (
-                <EntityDetail
-                  entity={workspace.selectedEntity}
-                  directRelations={workspace.directRelations}
-                  onEdit={beginEdit}
-                  onSelectEntity={navigateToEntity}
-                />
-              ) : null}
-              {mode === "edit" ? (
-                <ChangeEditor
-                  entity={baseEntity}
-                  content={draftContent}
-                  reason={draftReason}
-                  fieldError={fieldError}
-                  onContentChange={(value) => {
-                    setDraftContent(value);
-                    setFieldError(null);
-                  }}
-                  onReasonChange={(value) => {
-                    setDraftReason(value);
-                    setFieldError(null);
-                  }}
-                  onCancel={() => setMode("detail")}
-                  onReview={reviewChange}
-                />
-              ) : null}
-              {mode === "review" ? (
-                <DiffReview
-                  entity={baseEntity}
-                  reason={draftReason}
-                  diff={draftDiff}
-                  summary={draftDiffSummary}
-                  actionError={actionError}
-                  isPending={isPending}
-                  onBack={() => setMode("edit")}
-                  onConfirm={confirmDraft}
-                />
-              ) : null}
-              {mode === "result" && workspace.changeResult ? (
-                <ImpactResult
-                  entity={workspace.selectedEntity}
-                  changeResult={workspace.changeResult}
-                  selectedCandidateId={selectedCandidateId}
-                  onSelectCandidate={setSelectedCandidateId}
-                  onOpenEntity={navigateToEntity}
-                  onBackToEntity={() =>
-                    navigateToEntity(workspace.selectedEntity.id)
-                  }
-                />
-              ) : null}
-            </motion.div>
-          </div>
-        </div>
-
-        <footer className="px-2 pt-6 pb-2 text-center text-xs leading-5 text-content-tertiary">
-          Process Diff MVP · 公開用の架空データを使用しています
-        </footer>
-      </main>
+        ) : null}
+        {mode === "edit" ? (
+          <ChangeEditor
+            entity={baseEntity}
+            content={draftContent}
+            reason={draftReason}
+            fieldError={fieldError}
+            onContentChange={(value) => {
+              setDraftContent(value);
+              setFieldError(null);
+            }}
+            onReasonChange={(value) => {
+              setDraftReason(value);
+              setFieldError(null);
+            }}
+            onCancel={() => setMode("detail")}
+            onReview={reviewChange}
+          />
+        ) : null}
+        {mode === "review" ? (
+          <DiffReview
+            entity={baseEntity}
+            reason={draftReason}
+            diff={draftDiff}
+            summary={draftDiffSummary}
+            actionError={actionError}
+            isPending={isPending}
+            onBack={() => setMode("edit")}
+            onConfirm={confirmDraft}
+          />
+        ) : null}
+        {mode === "result" && workspace.changeResult ? (
+          <ImpactResult
+            organizationSlug={organizationSlug}
+            entity={workspace.selectedEntity}
+            changeResult={workspace.changeResult}
+            selectedCandidateId={selectedCandidateId}
+            onSelectCandidate={setSelectedCandidateId}
+            onNavigate={handleEntityNavigate}
+          />
+        ) : null}
+      </motion.div>
     </div>
   );
 }

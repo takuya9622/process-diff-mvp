@@ -9,6 +9,7 @@ export type ChangeResult = {
   beforeContent: string;
   afterContent: string;
   reason: string | null;
+  changedByName: string;
   createdAt: string;
   diff: DiffLine[];
   diffSummary: DiffSummary;

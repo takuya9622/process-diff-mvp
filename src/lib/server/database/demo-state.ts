@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { count, eq, sql } from "drizzle-orm";
+import { and, count, eq, sql } from "drizzle-orm";
 
 import { INITIAL_DEMO_ENTITY_NAME } from "@/constants/demo";
 import { database } from "@/lib/server/database/client";
@@ -20,18 +20,24 @@ type DatabaseTransaction = Parameters<
   Parameters<typeof database.transaction>[0]
 >[0];
 
-export async function seedDemoState() {
+export async function seedDemoState(organizationId: string) {
   return database.transaction(async (transaction) => {
-    await lockDemoTables(transaction);
+    await lockOrganizationDemoState(transaction, organizationId);
     const [{ entityCount }] = await transaction
       .select({ entityCount: count() })
-      .from(businessEntities);
+      .from(businessEntities)
+      .where(eq(businessEntities.organizationId, organizationId));
 
     if (entityCount > 0) {
       const [initialEntity] = await transaction
         .select({ id: businessEntities.id })
         .from(businessEntities)
-        .where(eq(businessEntities.name, INITIAL_DEMO_ENTITY_NAME))
+        .where(
+          and(
+            eq(businessEntities.organizationId, organizationId),
+            eq(businessEntities.name, INITIAL_DEMO_ENTITY_NAME),
+          ),
+        )
         .limit(1);
 
       if (!initialEntity) {
@@ -43,32 +49,46 @@ export async function seedDemoState() {
       return { initialEntityId: initialEntity.id, created: false };
     }
 
-    const initialEntityId = await insertDemoState(transaction);
+    const initialEntityId = await insertDemoState(transaction, organizationId);
     return { initialEntityId, created: true };
   });
 }
 
-export async function resetDemoState() {
+export async function resetDemoState(organizationId: string) {
   return database.transaction(async (transaction) => {
-    await lockDemoTables(transaction);
-    await transaction.delete(changeSets);
-    await transaction.delete(entityVersions);
-    await transaction.delete(businessRelations);
-    await transaction.delete(businessEntities);
+    await lockOrganizationDemoState(transaction, organizationId);
+    await transaction
+      .delete(changeSets)
+      .where(eq(changeSets.organizationId, organizationId));
+    await transaction
+      .delete(entityVersions)
+      .where(eq(entityVersions.organizationId, organizationId));
+    await transaction
+      .delete(businessRelations)
+      .where(eq(businessRelations.organizationId, organizationId));
+    await transaction
+      .delete(businessEntities)
+      .where(eq(businessEntities.organizationId, organizationId));
 
     return {
-      initialEntityId: await insertDemoState(transaction),
+      initialEntityId: await insertDemoState(transaction, organizationId),
     };
   });
 }
 
-async function lockDemoTables(transaction: DatabaseTransaction) {
+async function lockOrganizationDemoState(
+  transaction: DatabaseTransaction,
+  organizationId: string,
+) {
   await transaction.execute(
-    sql`lock table change_sets, entity_versions, relations, business_entities in access exclusive mode`,
+    sql`select pg_advisory_xact_lock(hashtext(${organizationId}))`,
   );
 }
 
-async function insertDemoState(transaction: DatabaseTransaction) {
+async function insertDemoState(
+  transaction: DatabaseTransaction,
+  organizationId: string,
+) {
   const now = new Date();
   const entityIdsBySeedKey = new Map(
     DEMO_ENTITY_SEEDS.map((entity) => [entity.key, randomUUID()]),
@@ -77,6 +97,7 @@ async function insertDemoState(transaction: DatabaseTransaction) {
   await transaction.insert(businessEntities).values(
     DEMO_ENTITY_SEEDS.map((entity) => ({
       id: requireSeedId(entityIdsBySeedKey, entity.key),
+      organizationId,
       entityType: entity.type,
       name: entity.name,
       description: entity.description,
@@ -89,6 +110,7 @@ async function insertDemoState(transaction: DatabaseTransaction) {
   await transaction.insert(entityVersions).values(
     DEMO_ENTITY_SEEDS.map((entity) => ({
       id: randomUUID(),
+      organizationId,
       businessEntityId: requireSeedId(entityIdsBySeedKey, entity.key),
       versionNumber: 1,
       content: entity.content,
@@ -99,6 +121,7 @@ async function insertDemoState(transaction: DatabaseTransaction) {
   await transaction.insert(businessRelations).values(
     DEMO_RELATION_SEEDS.map((relation) => ({
       id: randomUUID(),
+      organizationId,
       sourceEntityId: requireSeedId(entityIdsBySeedKey, relation.sourceKey),
       targetEntityId: requireSeedId(entityIdsBySeedKey, relation.targetKey),
       relationType: relation.type,

@@ -1,4 +1,5 @@
-import { desc, eq } from "drizzle-orm";
+import { cache } from "react";
+import { and, desc, eq } from "drizzle-orm";
 
 import {
   BUSINESS_ENTITY_TYPE_LABELS,
@@ -14,6 +15,7 @@ import {
 } from "@/lib/domain/impact-search";
 import { createLineDiff, summarizeLineDiff } from "@/lib/domain/line-diff";
 import { database } from "@/lib/server/database/client";
+import { users } from "@/lib/server/database/auth-schema.generated";
 import {
   businessEntities,
   businessRelations,
@@ -30,130 +32,203 @@ const japaneseCollator = new Intl.Collator("ja", {
   sensitivity: "variant",
 });
 
-export async function getWorkspaceData(input: {
-  entityId?: string;
-  changeSetId?: string;
-}): Promise<WorkspaceData> {
-  const [entityRows, relationRows, versionRows] = await Promise.all([
-    database.select().from(businessEntities),
-    database.select().from(businessRelations),
-    database
-      .select()
-      .from(entityVersions)
-      .orderBy(desc(entityVersions.versionNumber)),
-  ]);
+type WorkspaceModel = {
+  entities: BusinessEntity[];
+  relations: BusinessRelation[];
+  entitiesById: ReadonlyMap<string, BusinessEntity>;
+  versionsById: ReadonlyMap<string, typeof entityVersions.$inferSelect>;
+};
 
-  const versionsById = new Map(
-    versionRows.map((version) => [version.id, version]),
-  );
-  const currentVersionsByEntityId = new Map<
-    string,
-    (typeof versionRows)[number]
-  >();
-
-  for (const version of versionRows) {
-    if (!currentVersionsByEntityId.has(version.businessEntityId)) {
-      currentVersionsByEntityId.set(version.businessEntityId, version);
-    }
-  }
-
-  const entities = entityRows.map((entity): BusinessEntity => {
-    if (!isBusinessEntityType(entity.entityType)) {
-      throw new Error(`Unknown business entity type: ${entity.entityType}`);
-    }
-
-    const currentVersion = currentVersionsByEntityId.get(entity.id);
-
-    if (!currentVersion) {
-      throw new Error(`Business entity ${entity.id} does not have a version.`);
-    }
-
-    return {
-      id: entity.id,
-      type: entity.entityType,
-      typeLabel: BUSINESS_ENTITY_TYPE_LABELS[entity.entityType],
-      name: entity.name,
-      description: entity.description,
-      content: entity.currentContent,
-      currentVersionId: currentVersion.id,
-      currentVersionNumber: currentVersion.versionNumber,
-      updatedAt: entity.updatedAt.toISOString(),
-    };
-  });
-
-  entities.sort(compareEntities);
-
-  if (entities.length === 0) {
-    throw new Error(
-      "Demo data is empty. Run the database seed before opening the app.",
-    );
-  }
-
-  const relations = relationRows.map((relation): BusinessRelation => {
-    if (!isRelationType(relation.relationType)) {
-      throw new Error(`Unknown relation type: ${relation.relationType}`);
-    }
-
-    return {
-      id: relation.id,
-      sourceEntityId: relation.sourceEntityId,
-      targetEntityId: relation.targetEntityId,
-      type: relation.relationType,
-    };
-  });
-  const entitiesById = new Map(entities.map((entity) => [entity.id, entity]));
-  const initialEntity =
-    entities.find((entity) => entity.name === INITIAL_DEMO_ENTITY_NAME) ??
-    entities[0];
-  const changeResult = await getChangeResult(
-    input.changeSetId,
-    entities,
-    relations,
-    entitiesById,
-    versionsById,
-  );
-  const selectedEntity =
-    (changeResult && entitiesById.get(changeResult.businessEntityId)) ||
-    (isUuid(input.entityId) && entitiesById.get(input.entityId)) ||
-    initialEntity;
-  const notice = createLookupNotice(input, changeResult, entitiesById);
-
-  return {
-    entities,
-    selectedEntity,
-    directRelations: findDirectRelations(
-      selectedEntity.id,
-      entities,
-      relations,
-    ),
-    changeResult,
-    notice,
-  };
+export async function getWorkspaceNavigationEntities(organizationId: string) {
+  return (await loadWorkspaceModel(organizationId)).entities.map((entity) => ({
+    id: entity.id,
+    type: entity.type,
+    typeLabel: entity.typeLabel,
+    name: entity.name,
+    description: entity.description,
+  }));
 }
 
-async function getChangeResult(
-  changeSetId: string | undefined,
-  entities: BusinessEntity[],
-  relations: BusinessRelation[],
-  entitiesById: ReadonlyMap<string, BusinessEntity>,
-  versionsById: ReadonlyMap<string, typeof entityVersions.$inferSelect>,
-): Promise<ChangeResult | null> {
+export async function getInitialWorkspaceEntityId(organizationId: string) {
+  const { entities } = await loadWorkspaceModel(organizationId);
+  return findInitialEntity(entities).id;
+}
+
+export async function getEntityWorkspaceData(
+  organizationId: string,
+  businessEntityId: string,
+): Promise<WorkspaceData | null> {
+  if (!isUuid(businessEntityId)) {
+    return null;
+  }
+
+  const model = await loadWorkspaceModel(organizationId);
+  const selectedEntity = model.entitiesById.get(businessEntityId);
+
+  if (!selectedEntity) {
+    return null;
+  }
+
+  return createWorkspaceData(model, selectedEntity, null);
+}
+
+export async function getChangeWorkspaceData(
+  organizationId: string,
+  changeSetId: string,
+): Promise<WorkspaceData | null> {
   if (!isUuid(changeSetId)) {
     return null;
   }
 
-  const [changeSet] = await database
-    .select()
-    .from(changeSets)
-    .where(eq(changeSets.id, changeSetId))
-    .limit(1);
+  const model = await loadWorkspaceModel(organizationId);
+  const changeResult = await getChangeResult(
+    organizationId,
+    changeSetId,
+    model,
+  );
 
-  if (!changeSet || !entitiesById.has(changeSet.businessEntityId)) {
+  if (!changeResult) {
     return null;
   }
 
-  const beforeVersion = versionsById.get(changeSet.beforeVersionId);
-  const afterVersion = versionsById.get(changeSet.afterVersionId);
+  const selectedEntity = model.entitiesById.get(changeResult.businessEntityId);
+
+  if (!selectedEntity) {
+    return null;
+  }
+
+  return createWorkspaceData(model, selectedEntity, changeResult);
+}
+
+const loadWorkspaceModel = cache(
+  async (organizationId: string): Promise<WorkspaceModel> => {
+    const [entityRows, relationRows, versionRows] = await Promise.all([
+      database
+        .select()
+        .from(businessEntities)
+        .where(eq(businessEntities.organizationId, organizationId)),
+      database
+        .select()
+        .from(businessRelations)
+        .where(eq(businessRelations.organizationId, organizationId)),
+      database
+        .select()
+        .from(entityVersions)
+        .where(eq(entityVersions.organizationId, organizationId))
+        .orderBy(desc(entityVersions.versionNumber)),
+    ]);
+
+    const versionsById = new Map(
+      versionRows.map((version) => [version.id, version]),
+    );
+    const currentVersionsByEntityId = new Map<
+      string,
+      (typeof versionRows)[number]
+    >();
+
+    for (const version of versionRows) {
+      if (!currentVersionsByEntityId.has(version.businessEntityId)) {
+        currentVersionsByEntityId.set(version.businessEntityId, version);
+      }
+    }
+
+    const entities = entityRows.map((entity): BusinessEntity => {
+      if (!isBusinessEntityType(entity.entityType)) {
+        throw new Error(`Unknown business entity type: ${entity.entityType}`);
+      }
+
+      const currentVersion = currentVersionsByEntityId.get(entity.id);
+
+      if (!currentVersion) {
+        throw new Error(
+          `Business entity ${entity.id} does not have a version.`,
+        );
+      }
+
+      return {
+        id: entity.id,
+        type: entity.entityType,
+        typeLabel: BUSINESS_ENTITY_TYPE_LABELS[entity.entityType],
+        name: entity.name,
+        description: entity.description,
+        content: entity.currentContent,
+        currentVersionId: currentVersion.id,
+        currentVersionNumber: currentVersion.versionNumber,
+        updatedAt: entity.updatedAt.toISOString(),
+      };
+    });
+
+    entities.sort(compareEntities);
+
+    if (entities.length === 0) {
+      throw new Error(
+        "Demo data is empty. Run the database seed before opening the app.",
+      );
+    }
+
+    const relations = relationRows.map((relation): BusinessRelation => {
+      if (!isRelationType(relation.relationType)) {
+        throw new Error(`Unknown relation type: ${relation.relationType}`);
+      }
+
+      return {
+        id: relation.id,
+        sourceEntityId: relation.sourceEntityId,
+        targetEntityId: relation.targetEntityId,
+        type: relation.relationType,
+      };
+    });
+
+    return {
+      entities,
+      relations,
+      entitiesById: new Map(entities.map((entity) => [entity.id, entity])),
+      versionsById,
+    };
+  },
+);
+
+function createWorkspaceData(
+  model: WorkspaceModel,
+  selectedEntity: BusinessEntity,
+  changeResult: ChangeResult | null,
+): WorkspaceData {
+  return {
+    selectedEntity,
+    directRelations: findDirectRelations(
+      selectedEntity.id,
+      model.entities,
+      model.relations,
+    ),
+    changeResult,
+  };
+}
+
+async function getChangeResult(
+  organizationId: string,
+  changeSetId: string,
+  model: WorkspaceModel,
+): Promise<ChangeResult | null> {
+  const [row] = await database
+    .select({ changeSet: changeSets, changedByName: users.name })
+    .from(changeSets)
+    .innerJoin(users, eq(changeSets.changedByUserId, users.id))
+    .where(
+      and(
+        eq(changeSets.organizationId, organizationId),
+        eq(changeSets.id, changeSetId),
+      ),
+    )
+    .limit(1);
+
+  if (!row || !model.entitiesById.has(row.changeSet.businessEntityId)) {
+    return null;
+  }
+
+  const { changeSet, changedByName } = row;
+
+  const beforeVersion = model.versionsById.get(changeSet.beforeVersionId);
+  const afterVersion = model.versionsById.get(changeSet.afterVersionId);
 
   if (!beforeVersion || !afterVersion) {
     throw new Error(`Change set ${changeSet.id} references a missing version.`);
@@ -169,34 +244,23 @@ async function getChangeResult(
     beforeContent: beforeVersion.content,
     afterContent: afterVersion.content,
     reason: changeSet.reason,
+    changedByName,
     createdAt: changeSet.createdAt.toISOString(),
     diff,
     diffSummary: summarizeLineDiff(diff),
     impactCandidates: findImpactCandidates(
       changeSet.businessEntityId,
-      entities,
-      relations,
+      model.entities,
+      model.relations,
     ),
   };
 }
 
-function createLookupNotice(
-  input: { entityId?: string; changeSetId?: string },
-  changeResult: ChangeResult | null,
-  entitiesById: ReadonlyMap<string, BusinessEntity>,
-) {
-  if (input.changeSetId && !changeResult) {
-    return "指定された変更結果は見つかりませんでした。サンプルがリセットされた可能性があります。";
-  }
-
-  if (
-    input.entityId &&
-    (!isUuid(input.entityId) || !entitiesById.has(input.entityId))
-  ) {
-    return "指定された業務要素は見つかりませんでした。デモの初期項目を表示しています。";
-  }
-
-  return null;
+function findInitialEntity(entities: BusinessEntity[]) {
+  return (
+    entities.find((entity) => entity.name === INITIAL_DEMO_ENTITY_NAME) ??
+    entities[0]
+  );
 }
 
 function compareEntities(left: BusinessEntity, right: BusinessEntity) {
