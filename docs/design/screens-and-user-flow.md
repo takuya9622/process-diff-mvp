@@ -20,8 +20,10 @@
 [MVPの不足点とプロダクト方針](../requirements/mvp-gaps-and-product-direction.md)を参照してください。
 
 この文書は現行MVPの実装済み画面を正本とします。案件、タスク、承認、期限、証跡を扱う
-次段階の画面とフローは[ネイティブ業務ワークフロー設計](native-business-workflows.md)で定義し、
-実装時にこの文書へ統合または分割します。
+次段階の画面とフローは
+[ネイティブ業務実行の画面とユーザーフロー](native-business-workflow-screens.md)を正本とします。
+その前提となるドメインと実行意味は
+[ネイティブ業務ワークフロー設計](native-business-workflows.md)を参照してください。
 
 ## 2. 画面構成の決定
 

@@ -17,7 +17,8 @@
 | [domain-and-impact.md](domain-and-impact.md) | データモデルと影響候補の判定 | ドメイン、データ、探索処理を検討するとき |
 | [mvp-gaps-and-product-direction.md](mvp-gaps-and-product-direction.md) | 現行MVPの不足点、今回補う設計、次期仮説の境界 | MVPの優先順位、事業仮説、将来拡張を判断するとき |
 | [../design/native-business-workflows.md](../design/native-business-workflows.md) | ネイティブ業務実行、将来のAPI境界、次の実装段階 | 申請、作業、承認、期限、証跡、外部連携を設計するとき |
-| [../design/screens-and-user-flow.md](../design/screens-and-user-flow.md) | SPAの画面一覧と中核ユーザーフロー | 画面、画面状態、操作導線を検討するとき |
+| [../design/native-business-workflow-screens.md](../design/native-business-workflow-screens.md) | 次期MVPの業務実行画面と中核ユーザーフロー | 案件、作業、承認、完了の画面と導線を検討するとき |
+| [../design/screens-and-user-flow.md](../design/screens-and-user-flow.md) | 現行MVPのSPA画面一覧と中核ユーザーフロー | 業務知識、変更、影響候補の画面を検討するとき |
 | [../design/authentication-and-organization.md](../design/authentication-and-organization.md) | 認証、組織、権限、データ分離 | 認証または組織境界を実装・検証するとき |
 | [../design/sample-business-scenario.md](../design/sample-business-scenario.md) | 経費精算のサンプル業務と基準シナリオ | seed、デモ手順、E2Eの期待値を確認するとき |
 | [../design/impact-search.md](../design/impact-search.md) | 影響候補の探索、並び順、経路表示 | 探索ロジックと結果表示を実装するとき |
