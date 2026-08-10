@@ -6,8 +6,9 @@
 
 | ファイル | 内容 | 状態 |
 |---|---|---|
-| [requirements/README.md](requirements/README.md) | MVPの要件定義とプロダクト体験原則 | 事業仮説・日常価値反映済み |
-| [requirements/mvp-gaps-and-product-direction.md](requirements/mvp-gaps-and-product-direction.md) | 現行MVPの不足点、今回補う設計、次期仮説の境界 | 現行MVP反映済み |
+| [requirements/README.md](requirements/README.md) | 現行MVPの要件と次段階のプロダクト体験原則 | ネイティブ業務実行方針反映済み |
+| [requirements/mvp-gaps-and-product-direction.md](requirements/mvp-gaps-and-product-direction.md) | 現行MVPの不足点と日本企業向けの次段階方針 | ネイティブ業務実行方針反映済み |
+| [design/native-business-workflows.md](design/native-business-workflows.md) | 日本企業向けのネイティブ業務実行、将来のAPI境界、次の実装段階 | 方針確定・実装前 |
 | [design/screens-and-user-flow.md](design/screens-and-user-flow.md) | 認証を含む画面一覧と中核ユーザーフロー | 業務ハブUI反映済み |
 | [design/authentication-and-organization.md](design/authentication-and-organization.md) | Better Auth、組織、権限、データ分離のMVP設計 | 認証・体験方針実装済み |
 | [design/sample-business-scenario.md](design/sample-business-scenario.md) | 経費精算のサンプル業務と基準シナリオ | 日常価値シナリオ実装済み |
