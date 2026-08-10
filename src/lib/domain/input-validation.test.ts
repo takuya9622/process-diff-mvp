@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { CHANGE_REASON_MAX_LENGTH, CONTENT_MAX_LENGTH } from "@/constants/demo";
+import {
+  CHANGE_REASON_MAX_LENGTH,
+  CONTENT_MAX_LENGTH,
+  CONTENT_MAX_LINES,
+} from "@/constants/demo";
 import { validateChangeInput } from "@/lib/domain/input-validation";
 
 describe("validateChangeInput", () => {
@@ -40,5 +44,16 @@ describe("validateChangeInput", () => {
     ).toMatchObject({
       valid: true,
     });
+  });
+
+  it("行単位差分を安全に算出できる行数へ制限する", () => {
+    expect(
+      validateChangeInput(
+        Array.from({ length: CONTENT_MAX_LINES + 1 }, (_, index) =>
+          String(index),
+        ).join("\n"),
+        "",
+      ),
+    ).toMatchObject({ valid: false, field: "content" });
   });
 });

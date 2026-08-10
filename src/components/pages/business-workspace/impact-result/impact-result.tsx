@@ -4,6 +4,7 @@ import Link from "next/link";
 import { DiffView } from "@/components/general/diff-view";
 import { EntityTypeBadge } from "@/components/general/entity-type-badge";
 import { SectionHeading } from "@/components/general/section-heading";
+import { ImpactRelationGraph } from "@/components/pages/business-workspace/impact-result/impact-relation-graph";
 import { createEntityPath } from "@/constants/routes";
 import type { BusinessEntity } from "@/types/business-entity";
 import type { ChangeResult } from "@/types/change-set";
@@ -38,9 +39,9 @@ export function ImpactResult({
   return (
     <div>
       <SectionHeading
-        eyebrow="Change confirmed"
-        title="変更と影響候補を確認"
-        description={`${entity.name}の変更を保存しました。以下は、影響を断定する結果ではなく確認が必要な候補です。`}
+        eyebrow="変更フロー完了"
+        title="変更案を反映しました"
+        description={`${entity.name}の現在内容を更新しました。登録済みの関係から、続けて確認すべき候補を表示します。`}
         focusTarget
         action={
           <Link
@@ -48,7 +49,7 @@ export function ImpactResult({
             onClick={onNavigate}
             className={SECONDARY_LINK_CLASSES}
           >
-            現在の内容を見る
+            現在の業務知識へ戻る
           </Link>
         }
       />
@@ -128,7 +129,7 @@ export function ImpactResult({
               確認が必要な候補
             </h2>
             <p className="mt-1 text-sm text-content-secondary">
-              登録された関係を変更元から最大2段階まで探索
+              関係の全体像を見てから、候補ごとの経路を確認できます
             </p>
           </div>
           <p className="text-xs font-semibold text-content-tertiary">
@@ -137,7 +138,17 @@ export function ImpactResult({
           </p>
         </div>
 
-        <div className="mt-5 grid gap-6 xl:grid-cols-[minmax(18rem,0.85fr)_minmax(0,1.15fr)]">
+        <div className="mt-5">
+          <ImpactRelationGraph
+            originEntity={entity}
+            directCandidates={directCandidates}
+            secondaryCandidates={secondaryCandidates}
+            selectedCandidateId={selectedCandidate?.entity.id ?? null}
+            onSelect={onSelectCandidate}
+          />
+        </div>
+
+        <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(18rem,0.85fr)_minmax(0,1.15fr)]">
           <div className="space-y-6">
             <CandidateGroup
               title="直接関係"
@@ -193,7 +204,7 @@ function CandidateGroup({
               type="button"
               aria-pressed={isSelected}
               onClick={() => onSelect(candidate.entity.id)}
-              className={`w-full rounded-2xl border p-4 text-left transition-colors focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:outline-none ${
+              className={`w-full rounded-xl border px-3 py-3 text-left transition-colors focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:outline-none ${
                 isSelected
                   ? "border-action-primary bg-action-muted"
                   : "border-outline bg-surface hover:border-outline-strong hover:bg-surface-muted"
@@ -208,7 +219,7 @@ function CandidateGroup({
                   label={candidate.entity.typeLabel}
                 />
               </span>
-              <span className="mt-2 line-clamp-2 block text-xs leading-5 text-content-secondary">
+              <span className="mt-1.5 line-clamp-2 block text-xs leading-5 text-content-secondary">
                 {candidate.reason}
               </span>
             </button>
@@ -290,7 +301,7 @@ function PathDetail({
         onClick={onNavigate}
         className={`${SECONDARY_LINK_CLASSES} mt-6 w-full`}
       >
-        {candidate.entity.name}の詳細を見る
+        {candidate.entity.name}の業務知識を開く
       </Link>
     </div>
   );

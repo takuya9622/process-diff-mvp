@@ -120,7 +120,8 @@ export function WorkspaceShell({
           </div>
 
           <footer className="px-2 pt-6 pb-2 text-center text-xs leading-5 text-content-tertiary">
-            Process Diff MVP · 組織ごとに分離された架空データを使用しています
+            Process Diff MVP ·
+            組織ごとに分離された架空の業務知識を使用しています
           </footer>
         </main>
       </div>

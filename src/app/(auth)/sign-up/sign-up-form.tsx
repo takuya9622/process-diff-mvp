@@ -50,7 +50,7 @@ export function SignUpForm() {
           アカウントを作成
         </h1>
         <p className="mt-2 text-sm leading-6 text-content-secondary">
-          登録後に、最初の組織ワークスペースを作成します。
+          登録後に、最初の業務知識ワークスペースを作成します。
         </p>
       </div>
 
