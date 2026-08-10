@@ -1,4 +1,4 @@
-export const INITIAL_DEMO_ENTITY_NAME = "領収書提出ルール";
+export const INITIAL_DEMO_ENTITY_NAME = "経費申請";
 
 export const DEMO_NOTICE =
   "変更内容はこの組織のメンバーだけに共有されます。MVPでは架空データを使い、個人情報や認証情報は入力しないでください。";

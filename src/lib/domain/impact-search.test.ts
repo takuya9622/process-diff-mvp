@@ -6,9 +6,9 @@ import {
   findImpactCandidates,
 } from "@/lib/domain/impact-search";
 import {
+  CHANGE_TARGET_DEMO_ENTITY_KEY,
   DEMO_ENTITY_SEEDS,
   DEMO_RELATION_SEEDS,
-  INITIAL_DEMO_ENTITY_KEY,
 } from "@/lib/server/database/seed-data";
 import type { BusinessEntity } from "@/types/business-entity";
 import type { BusinessRelation } from "@/types/relation";
@@ -37,7 +37,7 @@ const relations: BusinessRelation[] = DEMO_RELATION_SEEDS.map(
 describe("findImpactCandidates", () => {
   it("基準シナリオで直接4件、2段階先6件を重複なく返す", () => {
     const candidates = findImpactCandidates(
-      INITIAL_DEMO_ENTITY_KEY,
+      CHANGE_TARGET_DEMO_ENTITY_KEY,
       entities,
       relations,
     );
@@ -52,7 +52,7 @@ describe("findImpactCandidates", () => {
       new Set(candidates.map((candidate) => candidate.entity.id)),
     ).toHaveLength(10);
     expect(candidates.map((candidate) => candidate.entity.id)).not.toContain(
-      INITIAL_DEMO_ENTITY_KEY,
+      CHANGE_TARGET_DEMO_ENTITY_KEY,
     );
     expect(candidates.map((candidate) => candidate.entity.id)).not.toContain(
       "system-accounting",
@@ -61,7 +61,7 @@ describe("findImpactCandidates", () => {
 
   it("incomingとoutgoingを探索し、同距離の代表経路を固定規則で選ぶ", () => {
     const candidates = findImpactCandidates(
-      INITIAL_DEMO_ENTITY_KEY,
+      CHANGE_TARGET_DEMO_ENTITY_KEY,
       entities,
       relations,
     );
@@ -85,12 +85,12 @@ describe("findImpactCandidates", () => {
 
   it("入力順を変えても候補、順序、経路が変わらない", () => {
     const normal = findImpactCandidates(
-      INITIAL_DEMO_ENTITY_KEY,
+      CHANGE_TARGET_DEMO_ENTITY_KEY,
       entities,
       relations,
     );
     const reversed = findImpactCandidates(
-      INITIAL_DEMO_ENTITY_KEY,
+      CHANGE_TARGET_DEMO_ENTITY_KEY,
       [...entities].reverse(),
       [...relations].reverse(),
     );
@@ -102,7 +102,7 @@ describe("findImpactCandidates", () => {
 describe("findDirectRelations", () => {
   it("変更前の詳細表示に必要な4件の直接関係を返す", () => {
     const directRelations = findDirectRelations(
-      INITIAL_DEMO_ENTITY_KEY,
+      CHANGE_TARGET_DEMO_ENTITY_KEY,
       entities,
       relations,
     );

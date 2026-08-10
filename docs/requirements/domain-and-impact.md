@@ -35,6 +35,16 @@ MVPで扱う種類は次のとおりです。
 `BusinessEntity`の`ROLE`は申請者・承認者などの業務上の役割であり、membershipのアクセス
 権限とは別概念です。
 
+### 1.2.1 Business Graphと業務ハブ
+
+`BusinessEntity`と`Relation`の集合を`Business Graph`として扱い、文書や変更履歴ではなく
+この構造をプロダクトの中心ドメインとします。
+
+通常利用の画面では`PROCESS`を入口にし、関連する`RULE`、`DOCUMENT`、`SYSTEM`、`ROLE`、
+ほかの`PROCESS`を業務単位で理解できるようにします。ただし`PROCESS`をほかの要素の親record
+にはせず、データモデル上は各`BusinessEntity`を同じ粒度のnodeとして扱います。業務をハブに
+するのは通常利用の情報設計であり、階層を固定するスキーマ変更ではありません。
+
 ### 1.3 関係
 
 業務要素同士のつながりを`Relation`として扱います。
@@ -87,3 +97,8 @@ MVPではAIによる意味解析を行わず、登録済みの関係グラフを
 MVPでは登録方向を保持したまま両方向へ最大2段階探索し、重み付きスコアは使用しません。
 重複排除、並び順、経路選択の詳細は
 [影響候補の探索仕様](../design/impact-search.md)で定義します。
+
+現行`Relation`は確認済みの関係だけを扱います。将来、外部データやAIから推定した関係を
+扱う場合も、推定結果をこの`Relation`へ直接保存せず、EvidenceとConfidenceを持つ候補として
+人が確認できる境界を設けます。次期仮説の詳細は
+[MVPの不足点とプロダクト方針](mvp-gaps-and-product-direction.md)を参照してください。
