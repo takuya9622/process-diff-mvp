@@ -98,3 +98,10 @@ docker compose --profile test run --rm --build e2e
 - `BETTER_AUTH_TRUSTED_ORIGINS`: 追加で許可するoriginをカンマ区切りで指定する。wildcard不可
 
 VercelのPreviewとProductionでは、Vercel上のEnvironment Variablesを使用します。
+
+## 本番適用
+
+`develop`から`main`へのリリースPull Requestでは、アプリケーションを公開する前に
+`Production data gate`でmigration、全組織への冪等seed、database検証を順に実行します。
+secretの初期設定、通常リリース、障害復旧の手順は
+[ローカル開発・デプロイ設計](docs/design/technology/local-development-and-deployment.md)を参照してください。
