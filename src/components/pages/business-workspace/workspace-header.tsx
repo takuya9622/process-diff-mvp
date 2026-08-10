@@ -50,7 +50,7 @@ export function WorkspaceHeader({
               業務知識ワークスペース · {organizationName} · あなた: {userName}
             </p>
             <p className="mt-0.5 text-xs text-content-tertiary">
-              組織の業務知識を一か所で理解し、必要なときは安全に変更できる
+              業務を起点に全体像を理解し、必要なときは安全に変更できる
             </p>
           </div>
         </div>

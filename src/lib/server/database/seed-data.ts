@@ -15,7 +15,8 @@ export type DemoRelationSeed = {
   targetKey: string;
 };
 
-export const INITIAL_DEMO_ENTITY_KEY = "rule-receipt-requirement";
+export const INITIAL_DEMO_ENTITY_KEY = "process-expense-submission";
+export const CHANGE_TARGET_DEMO_ENTITY_KEY = "rule-receipt-requirement";
 
 export const DEMO_ENTITY_SEEDS: DemoEntitySeed[] = [
   {
@@ -104,7 +105,7 @@ export const DEMO_ENTITY_SEEDS: DemoEntitySeed[] = [
 会計伝票番号と支払予定日が申請へ記録されていること。`,
   },
   {
-    key: INITIAL_DEMO_ENTITY_KEY,
+    key: CHANGE_TARGET_DEMO_ENTITY_KEY,
     type: "RULE",
     name: "領収書提出ルール",
     description: "どの経費に領収書が必要かを定めるルール",

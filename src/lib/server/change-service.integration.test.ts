@@ -48,8 +48,29 @@ describe("confirmChange", () => {
     await sqlClient.end();
   });
 
-  it("現在内容、新しいversion、ChangeSetと変更者を一つの確定操作で保存する", async () => {
+  it("初期表示では経費申請を起点に7件の業務構造を取得する", async () => {
     const workspace = await getInitialWorkspaceData(primaryFixture);
+
+    expect(workspace.selectedEntity.name).toBe("経費申請");
+    expect(workspace.selectedEntity.type).toBe("PROCESS");
+    expect(workspace.directRelations).toHaveLength(7);
+    expect(
+      workspace.directRelations.map((relation) => relation.relatedEntity.name),
+    ).toEqual(
+      expect.arrayContaining([
+        "領収書提出ルール",
+        "金額別承認ルール",
+        "経費申請システム",
+        "申請者",
+        "承認者",
+        "経費申請マニュアル",
+        "証憑確認",
+      ]),
+    );
+  });
+
+  it("現在内容、新しいversion、ChangeSetと変更者を一つの確定操作で保存する", async () => {
+    const workspace = await getChangeTargetWorkspaceData(primaryFixture);
     const target = workspace.selectedEntity;
     const changedContent =
       "金額にかかわらず、すべての経費申請に領収書を添付する。\n紙の領収書は申請後30日間保管する。";
@@ -92,7 +113,7 @@ describe("confirmChange", () => {
   });
 
   it("同じbefore_versionからの二つの変更は一方だけを確定する", async () => {
-    const target = (await getInitialWorkspaceData(primaryFixture))
+    const target = (await getChangeTargetWorkspaceData(primaryFixture))
       .selectedEntity;
 
     const results = await Promise.all([
@@ -264,6 +285,28 @@ async function getInitialWorkspaceData(fixture: Fixture) {
 
   if (!workspace) {
     throw new Error("Initial workspace entity was not found.");
+  }
+
+  return workspace;
+}
+
+async function getChangeTargetWorkspaceData(fixture: Fixture) {
+  const initialWorkspace = await getInitialWorkspaceData(fixture);
+  const target = initialWorkspace.directRelations.find(
+    (relation) => relation.relatedEntity.name === "領収書提出ルール",
+  );
+
+  if (!target) {
+    throw new Error("Change target was not found from the initial process.");
+  }
+
+  const workspace = await getEntityWorkspaceData(
+    fixture.organizationId,
+    target.relatedEntity.id,
+  );
+
+  if (!workspace) {
+    throw new Error("Change target workspace was not found.");
   }
 
   return workspace;
