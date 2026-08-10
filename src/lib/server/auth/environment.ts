@@ -13,13 +13,8 @@ export function getBetterAuthEnvironment(
     );
   }
 
-  const configuredUrl = environment.BETTER_AUTH_URL;
-
-  if (!configuredUrl) {
-    throw new Error("BETTER_AUTH_URL is not configured.");
-  }
-
-  const baseURL = parseOrigin("BETTER_AUTH_URL", configuredUrl);
+  const configuredUrl = resolveBetterAuthUrl(environment);
+  const baseURL = parseOrigin(configuredUrl.variableName, configuredUrl.value);
   const trustedOrigins = (environment.BETTER_AUTH_TRUSTED_ORIGINS ?? "")
     .split(",")
     .map((value) => value.trim())
@@ -31,6 +26,39 @@ export function getBetterAuthEnvironment(
     secret,
     trustedOrigins,
   } as const;
+}
+
+function resolveBetterAuthUrl(environment: BetterAuthEnvironment) {
+  const explicitUrl = environment.BETTER_AUTH_URL?.trim();
+
+  if (explicitUrl) {
+    return {
+      variableName: "BETTER_AUTH_URL",
+      value: explicitUrl,
+    } as const;
+  }
+
+  if (environment.VERCEL_ENV === "preview") {
+    const branchHostname = environment.VERCEL_BRANCH_URL?.trim();
+
+    if (branchHostname) {
+      return {
+        variableName: "VERCEL_BRANCH_URL",
+        value: `https://${branchHostname}`,
+      } as const;
+    }
+
+    const deploymentHostname = environment.VERCEL_URL?.trim();
+
+    if (deploymentHostname) {
+      return {
+        variableName: "VERCEL_URL",
+        value: `https://${deploymentHostname}`,
+      } as const;
+    }
+  }
+
+  throw new Error("BETTER_AUTH_URL is not configured.");
 }
 
 function parseOrigin(variableName: string, value: string) {
