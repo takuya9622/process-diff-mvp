@@ -21,7 +21,7 @@ export function CaseFieldList({
           <dt className="text-xs font-bold text-content-tertiary">
             {field.label}
           </dt>
-          <dd className="mt-1 whitespace-pre-wrap text-sm leading-6 font-medium text-content-primary">
+          <dd className="mt-1 text-sm leading-6 font-medium whitespace-pre-wrap text-content-primary">
             {formatFieldValue(field)}
           </dd>
         </div>

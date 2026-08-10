@@ -11,9 +11,7 @@ type CaseDetailPageProps = {
   params: Promise<{ organizationSlug: string; caseId: string }>;
 };
 
-export default async function CaseDetailPage({
-  params,
-}: CaseDetailPageProps) {
+export default async function CaseDetailPage({ params }: CaseDetailPageProps) {
   const { organizationSlug, caseId } = await params;
   const context = await requireOrganizationContext(organizationSlug);
   const caseDetail = await getCaseDetail(context.organizationId, caseId);

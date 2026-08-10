@@ -1,9 +1,6 @@
 import Link from "next/link";
 
-import {
-  createEntityPath,
-  createWorkItemPath,
-} from "@/constants/routes";
+import { createEntityPath, createWorkItemPath } from "@/constants/routes";
 import {
   fieldsToExpenseDefaults,
   formatWorkflowDateTime,
@@ -44,8 +41,7 @@ export function CaseDetail({
       (caseDetail.status === "RUNNING" &&
         caseDetail.currentStepKey === "approval"));
   const canOpenWorkItem =
-    canMutate &&
-    caseDetail.activeWorkItem?.assignedUserId === currentUserId;
+    canMutate && caseDetail.activeWorkItem?.assignedUserId === currentUserId;
 
   return (
     <div className="space-y-7 p-5 sm:p-8">
@@ -220,7 +216,8 @@ export function CaseDetail({
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="font-semibold text-content-primary">
-                    承認 {approval.attempt}回目 · {approvalStatusLabels[approval.status]}
+                    承認 {approval.attempt}回目 ·{" "}
+                    {approvalStatusLabels[approval.status]}
                   </p>
                   <p className="text-xs text-content-tertiary">
                     {approval.decidedAt
@@ -244,7 +241,10 @@ export function CaseDetail({
       </section>
 
       <section aria-labelledby="activity-title">
-        <h2 id="activity-title" className="text-lg font-bold text-content-primary">
+        <h2
+          id="activity-title"
+          className="text-lg font-bold text-content-primary"
+        >
           Activity
         </h2>
         <ol className="mt-4 space-y-0">

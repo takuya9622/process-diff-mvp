@@ -91,6 +91,7 @@ transactionとして許可します。
 - すべての`ChangeSet`
 - すべてのCaseと配下の項目値、WorkItem、Approval、Activity
 - WorkflowDefinition、WorkflowVersion、FieldDefinition、StepDefinition
+- すべてのCommunicationMessageとCommunicationChannel
 
 次は削除しません。
 
@@ -100,12 +101,12 @@ transactionとして許可します。
 
 ### 6.2 実行規則
 
-1. 利用者へ、現在の組織の案件、作業、変更内容、変更履歴が削除されることを確認する。
+1. 利用者へ、現在の組織の案件、作業、メッセージ、変更内容、変更履歴が削除されることを確認する。
 2. Server Actionがsession、membership、`workspace.reset`権限を再検証する。
-3. transaction内で、現在のorganization IDに一致する案件、業務定義、変更履歴、version、関係、
-   業務要素を参照制約に従う順序で削除する。
-4. 同じorganization IDを設定したseedから、業務要素、関係、初期version、公開済み経費申請を
-   再作成する。
+3. transaction内で、現在のorganization IDに一致するメッセージ、チャンネル、案件、業務定義、
+   変更履歴、version、関係、業務要素を参照制約に従う順序で削除する。
+4. 同じorganization IDを設定したseedから、業務要素、関係、初期version、公開済み経費申請、
+   初期チャンネルを再作成する。
 5. すべて成功した場合だけcommitする。
 
 リセット自体を`ChangeSet`として記録せず、リセット前の履歴は保持しません。リセットによって

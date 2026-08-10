@@ -178,12 +178,7 @@ export function ExpenseCaseForm({
             {isPending ? "保存中…" : "下書き保存"}
           </Button>
         ) : null}
-        <Button
-          type="submit"
-          name="intent"
-          value="submit"
-          disabled={isPending}
-        >
+        <Button type="submit" name="intent" value="submit" disabled={isPending}>
           {isPending
             ? "処理中…"
             : isResubmission

@@ -159,7 +159,7 @@ export async function getWorkflowHomeData(
 export async function getCaseList(
   organizationId: string,
   userId: string,
-  options: { limit?: number } = {},
+  options: { limit?: number; includeOrganizationCases?: boolean } = {},
 ): Promise<CaseSummary[]> {
   await ensureDemoWorkflowState(organizationId);
   const rows = await database
@@ -200,10 +200,12 @@ export async function getCaseList(
       ),
     )
     .where(
-      and(
-        eq(workflowCases.organizationId, organizationId),
-        eq(workflowCases.initiatedByUserId, userId),
-      ),
+      options.includeOrganizationCases
+        ? eq(workflowCases.organizationId, organizationId)
+        : and(
+            eq(workflowCases.organizationId, organizationId),
+            eq(workflowCases.initiatedByUserId, userId),
+          ),
     )
     .orderBy(desc(workflowCases.updatedAt))
     .limit(options.limit ?? 100);

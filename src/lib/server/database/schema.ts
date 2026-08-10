@@ -585,3 +585,80 @@ export const workflowActivities = pgTable(
     ),
   ],
 );
+
+export const communicationChannels = pgTable(
+  "communication_channels",
+  {
+    id: uuid("id").primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "restrict" }),
+    channelKey: text("channel_key").notNull(),
+    name: text("name").notNull(),
+    description: text("description").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    unique("communication_channels_organization_id_id_unique").on(
+      table.organizationId,
+      table.id,
+    ),
+    unique("communication_channels_organization_key_unique").on(
+      table.organizationId,
+      table.channelKey,
+    ),
+    index("communication_channels_organization_name_idx").on(
+      table.organizationId,
+      table.name,
+    ),
+  ],
+);
+
+export const communicationMessages = pgTable(
+  "communication_messages",
+  {
+    id: uuid("id").primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "restrict" }),
+    channelId: uuid("channel_id").notNull(),
+    authorUserId: uuid("author_user_id").references(() => users.id, {
+      onDelete: "restrict",
+    }),
+    authorDisplayName: text("author_display_name").notNull(),
+    messageType: text("message_type").notNull(),
+    body: text("body").notNull(),
+    relatedCaseId: uuid("related_case_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+    editedAt: timestamp("edited_at", { withTimezone: true }),
+  },
+  (table) => [
+    unique("communication_messages_organization_id_id_unique").on(
+      table.organizationId,
+      table.id,
+    ),
+    foreignKey({
+      name: "communication_messages_organization_channel_fk",
+      columns: [table.organizationId, table.channelId],
+      foreignColumns: [
+        communicationChannels.organizationId,
+        communicationChannels.id,
+      ],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "communication_messages_organization_case_fk",
+      columns: [table.organizationId, table.relatedCaseId],
+      foreignColumns: [workflowCases.organizationId, workflowCases.id],
+    }).onDelete("restrict"),
+    check(
+      "communication_messages_type_check",
+      sql`${table.messageType} in ('TEXT', 'CASE_SHARE', 'SYSTEM')`,
+    ),
+    index("communication_messages_channel_created_at_idx").on(
+      table.channelId,
+      table.createdAt,
+    ),
+    index("communication_messages_related_case_id_idx").on(table.relatedCaseId),
+  ],
+);

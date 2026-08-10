@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { and, count, eq, sql } from "drizzle-orm";
 
 import { INITIAL_DEMO_ENTITY_NAME } from "@/constants/demo";
+import { DEMO_COMMUNICATION_CHANNEL_SEEDS } from "@/lib/server/database/communication-seed-data";
 import { database } from "@/lib/server/database/client";
 import {
   DEMO_ENTITY_SEEDS,
@@ -13,6 +14,7 @@ import {
   businessEntities,
   businessRelations,
   changeSets,
+  communicationChannels,
   workflowCases,
   workflowDefinitions,
   workflowFieldDefinitions,
@@ -61,6 +63,7 @@ export async function seedDemoState(organizationId: string) {
         organizationId,
         initialEntity.id,
       );
+      await insertDemoCommunicationState(transaction, organizationId);
 
       return { initialEntityId: initialEntity.id, created: false };
     }
@@ -96,9 +99,19 @@ export async function ensureDemoWorkflowState(organizationId: string) {
   });
 }
 
+export async function ensureDemoCommunicationState(organizationId: string) {
+  return database.transaction(async (transaction) => {
+    await lockOrganizationDemoState(transaction, organizationId);
+    await insertDemoCommunicationState(transaction, organizationId);
+  });
+}
+
 export async function resetDemoState(organizationId: string) {
   return database.transaction(async (transaction) => {
     await lockOrganizationDemoState(transaction, organizationId);
+    await transaction
+      .delete(communicationChannels)
+      .where(eq(communicationChannels.organizationId, organizationId));
     await transaction
       .delete(workflowCases)
       .where(eq(workflowCases.organizationId, organizationId));
@@ -191,7 +204,39 @@ async function insertDemoState(
     INITIAL_DEMO_ENTITY_KEY,
   );
   await insertDemoWorkflowState(transaction, organizationId, initialEntityId);
+  await insertDemoCommunicationState(transaction, organizationId);
   return initialEntityId;
+}
+
+async function insertDemoCommunicationState(
+  transaction: DatabaseTransaction,
+  organizationId: string,
+) {
+  const existingChannels = await transaction
+    .select({ key: communicationChannels.channelKey })
+    .from(communicationChannels)
+    .where(eq(communicationChannels.organizationId, organizationId));
+  const existingKeys = new Set(existingChannels.map((channel) => channel.key));
+  const missingChannels = DEMO_COMMUNICATION_CHANNEL_SEEDS.filter(
+    (channel) => !existingKeys.has(channel.key),
+  );
+
+  if (missingChannels.length === 0) {
+    return;
+  }
+
+  const now = new Date();
+  await transaction.insert(communicationChannels).values(
+    missingChannels.map((channel) => ({
+      id: randomUUID(),
+      organizationId,
+      channelKey: channel.key,
+      name: channel.name,
+      description: channel.description,
+      createdAt: now,
+      updatedAt: now,
+    })),
+  );
 }
 
 async function insertDemoWorkflowState(

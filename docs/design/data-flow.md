@@ -106,11 +106,12 @@ P0とP1は通常利用で継続的に使う処理です。P8からP11は日常�
 | D3 | 公開業務定義 | `WorkflowDefinition`、`WorkflowVersion`、FieldDefinition、StepDefinition | seedまたは将来の公開操作 |
 | D4 | 案件実行状態 | `Case`、CaseFieldValue、WorkItem、Approval | 開始、入力、判断、遷移、完了 |
 | D5 | 案件Activity | 操作主体、業務役割、操作、理由、処理結果 | D4を変更する各操作 |
+| D6 | 組織内コミュニケーション | CommunicationChannel、CommunicationMessage、任意のCase参照 | チャンネル作成、投稿、案件共有 |
 | 算出値 | 影響候補 | `ImpactCandidate`相当の候補、関係経路、提示理由 | 変更確定後の探索 |
 
 `ImpactCandidate`は、保存必須のデータストアとしては扱いません。同じ入力と関係データから
 同じ結果を再現できることを優先し、確定済みの変更結果を表示するときに都度算出します。
-D1からD5はorganization IDで分離し、D-Aで認可された組織の状態だけを処理します。
+D1からD6はorganization IDで分離し、D-Aで認可された組織の状態だけを処理します。
 
 ## 7. 状態遷移上の設計判断
 
@@ -187,6 +188,16 @@ Approval、Activityは一つのtransactionで更新し、途中状態を確定�
 固定サンプルでは同じ認証済みmemberが申請者、承認者、経理担当を兼務しますが、D4とD5には
 実利用者IDと業務役割を別に保存します。外部APIや複数memberを追加しても、案件の正規状態と
 業務上の担当・証跡を外部providerへ従属させません。
+
+### 7.11 コミュニケーションは案件と外部providerの間に正規境界を持つ
+
+D6のメッセージは外部サービスのpayloadではなく、認可済みorganization ID、ネイティブな
+チャンネル、投稿主体、本文、任意のCase参照として保存します。案件を共有した場合もCaseの状態を
+messageへ複製せず、表示時に現在状態を参照します。
+
+SlackまたはGoogle Chatを追加するときは、provider固有IDと同期状態をConnector mappingへ保存し、
+D6との送受信に変換します。外部送信の成否をネイティブmessageの存在条件にせず、Connector停止中も
+アプリ内の相談と案件共有を継続できるようにします。
 
 ## 8. ユースケース図の扱い
 

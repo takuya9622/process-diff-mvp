@@ -49,13 +49,17 @@ export function WorkflowCatalog({
             </p>
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               <div>
-                <p className="text-xs font-bold text-content-tertiary">主な入力</p>
+                <p className="text-xs font-bold text-content-tertiary">
+                  主な入力
+                </p>
                 <p className="mt-1 text-sm text-content-primary">
                   経費発生日、金額、用途、支払先、領収書情報
                 </p>
               </div>
               <div>
-                <p className="text-xs font-bold text-content-tertiary">担当の流れ</p>
+                <p className="text-xs font-bold text-content-tertiary">
+                  担当の流れ
+                </p>
                 <p className="mt-1 text-sm text-content-primary">
                   申請者 → 承認者 → 経理担当
                 </p>

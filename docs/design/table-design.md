@@ -4,8 +4,8 @@
 
 | 項目 | 内容 |
 |---|---|
-| 文書状態 | ネイティブ経費申請フローを含む現行MVPへ反映済み |
-| 対象 | 現行MVPで永続化している21の認証・組織・業務ドメインテーブル |
+| 文書状態 | ネイティブ経費申請・コミュニケーションを含む現行MVPへ反映済み |
+| 対象 | 現行MVPで永続化している23の認証・組織・業務ドメインテーブル |
 | 設計レベル | 論理設計 |
 | 最終更新日 | 2026-08-10 |
 
@@ -14,6 +14,7 @@
 
 この設計を現行MVPのmigrationとtransaction実装へ反映済みです。2026-08-10に、API接続なしで
 経費申請を開始から承認、差し戻し、再申請、経理完了まで処理する9テーブルを追加しました。
+同日に、外部連携なしで組織内の相談と案件共有を行う2テーブルを追加しました。
 認証方式、組織権限、
 組織分離、移行方針の詳細は
 [認証・組織ワークスペース設計](authentication-and-organization.md)を参照してください。
@@ -35,7 +36,7 @@
 ## 3. テーブル設計方針
 
 1. 認証はBetter Authの必須テーブル、業務データは業務グラフと変更履歴の4テーブル、
-   業務定義と案件実行の9テーブルで扱う。
+   業務定義と案件実行の9テーブル、コミュニケーションの2テーブルで扱う。
 2. 現在状態と履歴を分け、一覧・詳細表示のたびに履歴を復元しなくてよい構造にする。
 3. バージョンは変更確定時点の内容をスナップショットとして保持する。
 4. 差分と影響候補は、保存済みデータから再現できる算出値として扱う。
@@ -50,6 +51,8 @@
 11. 実担当者と業務上の担当役割をWorkItemに、実行者と業務上の役割をActivityに分けて記録する。
 12. 案件配下の項目値、作業、承認、Activityは案件削除時にcascadeし、定義と実行中案件の参照は
     `restrict`する。
+13. チャンネルとメッセージを外部providerに依存しない正規データとし、外部IDと同期状態は
+    Connector実装時に別境界へ追加する。
 
 方針1、3、4、6、8は決定事項です。現在内容の重複保持と論理データ型は
 暫定事項です。
@@ -65,7 +68,7 @@ draw.ioの編集情報を埋め込んだ図の正本です。VS Codeのdraw.io�
 図中はテーブル名、PK・FK・UQ、物理型、列名、カーディナリティに限定します。NULL可否、CHECK、
 複合制約と設計判断はこの文書で管理します。
 
-現行ER図には、実装済みの認証・組織・業務ドメインの21テーブルを記載します。算出値、
+現行ER図には、実装済みの認証・組織・業務ドメインの23テーブルを記載します。算出値、
 未確定状態、初期データの供給元はテーブルではないため、本文で補足します。
 
 ### 4.1 ER図作成・更新ルール
@@ -341,11 +344,49 @@ versionごとの実行step、担当役割、期限を定義します。
 Activityは利用者向けの業務履歴です。改変防止、認可文脈、前後状態を備えた`AuditEvent`とは
 論理的に分け、完全監査が必要になった段階で別テーブルを追加します。
 
+### 6.15 `communication_channels`
+
+組織内で相談や案件共有を行うチャンネルを保持します。
+
+| 列 | 論理型 | NULL | キー | 内容 |
+|---|---|---|---|---|
+| `id` | ID | 不可 | PK | チャンネルの識別子 |
+| `organization_id` | ID | 不可 | FK | 所有組織 |
+| `channel_key` | 文字列 | 不可 | UQ | 組織内で不変の内部key |
+| `name` | 文字列 | 不可 |  | 利用者向け名称 |
+| `description` | 長文 | 不可 |  | 相談・共有する内容の説明 |
+| `created_at` | 日時 | 不可 |  | 作成日時 |
+| `updated_at` | 日時 | 不可 |  | チャンネルまたは最終投稿の更新日時 |
+
+`channel_key`はseedとアプリ内作成を識別するための内部値です。Slack channel IDやGoogle Chat
+space IDは保存せず、外部連携を実装するときにConnector mappingへ保持します。
+
+### 6.16 `communication_messages`
+
+チャンネル内の本文、投稿主体、任意の案件参照を保持します。
+
+| 列 | 論理型 | NULL | キー | 内容 |
+|---|---|---|---|---|
+| `id` | ID | 不可 | PK | メッセージの識別子 |
+| `organization_id` | ID | 不可 | FK | 所有組織 |
+| `channel_id` | ID | 不可 | FK | 投稿先チャンネル |
+| `author_user_id` | ID | 可 | FK | ネイティブ投稿を行った認証済み利用者 |
+| `author_display_name` | 文字列 | 不可 |  | 投稿時点の表示名snapshot |
+| `message_type` | 文字列 | 不可 |  | `TEXT`、`CASE_SHARE`、`SYSTEM` |
+| `body` | 長文 | 不可 |  | メッセージ本文 |
+| `related_case_id` | ID | 可 | FK | 共有する案件 |
+| `created_at` | 日時 | 不可 |  | 投稿日時 |
+| `edited_at` | 日時 | 可 |  | 将来の編集日時。初回実装では常にNULL |
+
+ネイティブ投稿では`author_user_id`をsessionから決定します。`author_display_name`は投稿主体を
+後から説明できるsnapshotです。`author_user_id`がNULLとなるsystem messageまたは外部投稿は、
+Connectorと監査要件を実装した段階で作成可能にします。
+
 ## 7. 関係と制約
 
 ### 7.1 必須の関係
 
-- 13の業務ドメインテーブルはすべて`organizations.id`を参照する。
+- 15の業務ドメインテーブルはすべて`organizations.id`を参照する。
 - `relations`のsource/targetは、`(organization_id, id)`で同じ組織の
   `business_entities`を参照する。
 - `entity_versions`は、`(organization_id, business_entity_id)`で同じ組織の
@@ -359,6 +400,8 @@ Activityは利用者向けの業務履歴です。改変防止、認可文脈、
 - CaseFieldValue、WorkItem、Approval、Activityは同じ組織のCaseを参照する。
 - CaseFieldValueは項目定義と更新者、WorkItemはstep定義と実担当者、Approvalは承認WorkItemと
   判断者、Activityは操作主体を参照する。
+- CommunicationMessageは同じ組織のCommunicationChannelを必須参照し、案件共有では同じ組織の
+  Caseだけを任意参照する。ネイティブ投稿は認証済みuserを参照する。
 - 削除操作を追加するまでは、参照されている行の削除を拒否する。
 
 ### 7.2 必須の一意性と検証
@@ -380,6 +423,8 @@ Activityは利用者向けの業務履歴です。改変防止、認可文脈、
   `(organization_id, work_item_id)`を一意にする。
 - version番号、案件番号、項目とstepの表示順、承認attemptは1以上、期限日数はNULLまたは0以上とする。
 - 定義、案件、WorkItem、Approvalの状態と項目型、step型は6章に記載した値だけを許可する。
+- `communication_channels`は`(organization_id, channel_key)`を一意にし、message typeは6.16に
+  記載した値だけを許可する。
 
 組織横断参照とversionの所属はPostgreSQLの複合外部キーでも拒否します。Server Actionと
 サービス層でもsession、membership、organization IDを再検証し、DB制約だけへ依存しません。
@@ -399,6 +444,8 @@ Activityは利用者向けの業務履歴です。改変防止、認可文脈、
 - `workflow_cases.organization_id`と`status`、`initiated_by_user_id`
 - `work_items.organization_id`と`status`、`assigned_user_id`、`case_id`
 - `case_field_values.case_id`、`approvals.case_id`、`workflow_activities.case_id`と`created_at`
+- `communication_channels.organization_id`と`name`
+- `communication_messages.channel_id`と`created_at`、`related_case_id`
 
 ## 8. 変更確定時の更新単位
 
@@ -416,9 +463,9 @@ Activityは利用者向けの業務履歴です。改変防止、認可文脈、
 
 ### 8.1 サンプルリセットの更新単位
 
-リセットでは、認可済みorganization IDに限定して案件、項目・step定義、業務version、業務定義、
+リセットでは、認可済みorganization IDに限定してメッセージとチャンネル、案件、項目・step定義、業務version、業務定義、
 `change_sets`、`entity_versions`、`relations`、`business_entities`を参照制約に従って削除します。
-その後、seedから業務知識と公開済み経費申請versionを再作成します。削除から再作成までを一つの
+その後、seedから業務知識、公開済み経費申請version、初期チャンネルを再作成します。削除から再作成までを一つの
 トランザクションで実行し、リセット自体はChangeSetやActivityへ記録しません。他組織、利用者、
 session、membershipは保持します。
 
@@ -449,7 +496,7 @@ session、membershipは保持します。
 ## 10. 流動的な更新のルール
 
 - 実装に必要な最小限の列・制約から追加し、将来用途だけを理由に追加しない。
-- 新しい業務要件が現在の13の業務ドメインテーブルで表現できない場合は、列追加、
+- 新しい業務要件が現在の15の業務ドメインテーブルで表現できない場合は、列追加、
   テーブル追加、算出処理の
   どれが最も単純かを比較する。
 - テーブルまたは関係を変更したときは、この文書とER図を同じPull Requestで更新する。
@@ -468,6 +515,8 @@ session、membershipは保持します。
 - 領収書はファイル本体ではなく参照情報から始め、期限はstep作成時刻からの暦日で計算する。
 - Activityは画面表示用の業務履歴として実装し、完全なAuditEventとは分離する。
 - `case_field_values.value`は文字列から始め、FieldDefinitionに基づくServer側検証を必須にする。
+- チャンネルとメッセージはアプリ内の正規データとし、外部providerのID、認証、cursor、retry、
+  同期状態は初回schemaへ含めない。
 
 次はMVP後も保留します。
 

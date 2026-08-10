@@ -22,12 +22,7 @@ export function ApprovalForm({
     WorkflowActionResult | null,
     FormData
   >(
-    decideApprovalAction.bind(
-      null,
-      organizationSlug,
-      caseId,
-      workItemId,
-    ),
+    decideApprovalAction.bind(null, organizationSlug, caseId, workItemId),
     null,
   );
 

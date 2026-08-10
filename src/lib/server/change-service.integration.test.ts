@@ -6,6 +6,10 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { INITIAL_DEMO_ENTITY_NAME } from "@/constants/demo";
 import { confirmChange } from "@/lib/server/change-service";
 import {
+  getCommunicationWorkspaceData,
+  postCommunicationMessage,
+} from "@/lib/server/communication-service";
+import {
   organizationMemberships,
   organizations,
   users,
@@ -16,6 +20,7 @@ import {
   businessEntities,
   businessRelations,
   changeSets,
+  communicationChannels,
   entityVersions,
   workflowCases,
   workflowDefinitions,
@@ -231,9 +236,7 @@ describe("organization-scoped demo services", () => {
   });
 
   it("差し戻しから再申請、承認、経理処理まで案件と証跡を保存する", async () => {
-    const [workflow] = await getWorkflowCatalog(
-      primaryFixture.organizationId,
-    );
+    const [workflow] = await getWorkflowCatalog(primaryFixture.organizationId);
     expect(workflow?.name).toBe("経費申請");
     if (!workflow) {
       throw new Error("Expense workflow was not found.");
@@ -352,6 +355,51 @@ describe("organization-scoped demo services", () => {
       await getCaseDetail(secondaryFixture.organizationId, submitted.caseId),
     ).toBeNull();
   });
+
+  it("通信チャンネルとメッセージを組織境界の内側だけで扱う", async () => {
+    const [primaryWorkspace, secondaryWorkspace] = await Promise.all([
+      getCommunicationWorkspaceData(
+        primaryFixture.organizationId,
+        primaryFixture.userId,
+      ),
+      getCommunicationWorkspaceData(
+        secondaryFixture.organizationId,
+        secondaryFixture.userId,
+      ),
+    ]);
+
+    expect(primaryWorkspace.channels).toHaveLength(2);
+    expect(
+      await postCommunicationMessage(
+        primaryFixture.organizationId,
+        primaryFixture.userId,
+        secondaryWorkspace.selectedChannel.id,
+        "別組織へは投稿できない",
+        "",
+      ),
+    ).toMatchObject({ status: "not-found" });
+
+    const posted = await postCommunicationMessage(
+      primaryFixture.organizationId,
+      primaryFixture.userId,
+      primaryWorkspace.selectedChannel.id,
+      "経費規程の確認をお願いします。",
+      "",
+    );
+    expect(posted).toMatchObject({ status: "success" });
+
+    const refreshed = await getCommunicationWorkspaceData(
+      primaryFixture.organizationId,
+      primaryFixture.userId,
+      primaryWorkspace.selectedChannel.id,
+    );
+    expect(refreshed.messages).toEqual([
+      expect.objectContaining({
+        body: "経費規程の確認をお願いします。",
+        authorDisplayName: primaryFixture.userName,
+      }),
+    ]);
+  });
 });
 
 type Fixture = ReturnType<typeof createFixture>;
@@ -392,6 +440,9 @@ async function insertFixture(fixture: Fixture) {
 }
 
 async function deleteFixtureData() {
+  await database
+    .delete(communicationChannels)
+    .where(inArray(communicationChannels.organizationId, organizationIds));
   await database
     .delete(workflowCases)
     .where(inArray(workflowCases.organizationId, organizationIds));

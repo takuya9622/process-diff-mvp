@@ -6,6 +6,18 @@ export function createOrganizationPath(organizationSlug: string) {
   return `/organizations/${encodeURIComponent(organizationSlug)}`;
 }
 
+export function createDocumentLibraryPath(organizationSlug: string) {
+  return `${createOrganizationPath(organizationSlug)}/documents`;
+}
+
+export function createCommunicationPath(
+  organizationSlug: string,
+  channelId?: string,
+) {
+  const path = `${createOrganizationPath(organizationSlug)}/communication`;
+  return channelId ? `${path}?channel=${encodeURIComponent(channelId)}` : path;
+}
+
 export function createEntityPath(
   organizationSlug: string,
   businessEntityId: string,

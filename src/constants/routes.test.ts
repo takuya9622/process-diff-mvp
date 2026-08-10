@@ -4,6 +4,8 @@ import {
   createChangePath,
   createCasePath,
   createCasesPath,
+  createCommunicationPath,
+  createDocumentLibraryPath,
   createEntityPath,
   createOrganizationPath,
   createSignInPath,
@@ -20,6 +22,15 @@ describe("workspace routes", () => {
     );
     expect(createEntityPath("sample team", "entity/id")).toBe(
       "/organizations/sample%20team/entities/entity%2Fid",
+    );
+    expect(createDocumentLibraryPath("sample team")).toBe(
+      "/organizations/sample%20team/documents",
+    );
+    expect(createCommunicationPath("sample team")).toBe(
+      "/organizations/sample%20team/communication",
+    );
+    expect(createCommunicationPath("sample team", "channel/id")).toBe(
+      "/organizations/sample%20team/communication?channel=channel%2Fid",
     );
     expect(createChangePath("sample team", "change/id")).toBe(
       "/organizations/sample%20team/changes/change%2Fid",

@@ -22,7 +22,7 @@ test.afterEach(async ({ page }) => {
   expect(browserErrors.get(page) ?? []).toEqual([]);
   await expect(
     page.locator(
-      '[data-nextjs-dialog], .vite-error-overlay, #webpack-dev-server-client-overlay',
+      "[data-nextjs-dialog], .vite-error-overlay, #webpack-dev-server-client-overlay",
     ),
   ).toHaveCount(0);
 });
@@ -33,14 +33,21 @@ test("登録後、業務を起点に変更せず業務構造を理解できる",
   await expect(
     page.getByText(fixture.userName, { exact: false }),
   ).toBeVisible();
-  await expect(
-    page.getByText("アクセス権限: オーナー", { exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByText("申請から承認・実行・証跡まで、業務をこのアプリで完結する", {
-      exact: true,
-    }),
-  ).toBeVisible();
+  await expect(page.getByText("オーナー", { exact: true })).toBeVisible();
+  const primaryNavigation = page.getByRole("navigation", {
+    name: "主ナビゲーション",
+  });
+  for (const itemName of [
+    "ダッシュボード",
+    "業務を開始",
+    "自分の案件",
+    "規定・文書",
+    "コミュニケーション",
+  ]) {
+    await expect(
+      primaryNavigation.getByRole("link", { name: new RegExp(itemName) }),
+    ).toBeVisible();
+  }
   await expect(
     page.getByRole("heading", { name: "経費精算", level: 2 }),
   ).toBeVisible();
@@ -292,9 +299,7 @@ test("経費申請を差し戻し、再申請、承認、経理完了まで処�
   await page.getByLabel(/金額/).fill("12800");
   await page.getByLabel(/用途/).fill("顧客訪問のための交通費");
   await page.getByLabel(/支払先/).fill("東海旅客鉄道");
-  await page
-    .getByLabel(/領収書情報/)
-    .fill("電子領収書 R-2026-0810");
+  await page.getByLabel(/領収書情報/).fill("電子領収書 R-2026-0810");
   await page
     .getByRole("button", { name: "内容を確認して申請", exact: true })
     .click();
@@ -306,10 +311,10 @@ test("経費申請を差し戻し、再申請、承認、経理完了まで処�
   await expect(
     page.getByText("申請内容の承認", { exact: true }).first(),
   ).toBeVisible();
-  await expect(page.getByText("workflow version 1", { exact: false })).toBeVisible();
-  await page
-    .getByRole("link", { name: "この作業を開く", exact: true })
-    .click();
+  await expect(
+    page.getByText("workflow version 1", { exact: false }),
+  ).toBeVisible();
+  await page.getByRole("link", { name: "この作業を開く", exact: true }).click();
   await expect(page).toHaveURL(/\/work-items\/[0-9a-f-]+$/);
 
   const returnReason = "訪問先と商談目的を追記してください。";
@@ -319,9 +324,7 @@ test("経費申請を差し戻し、再申請、承認、経理完了まで処�
   await expect(
     page.getByText("申請内容の修正・再申請", { exact: true }),
   ).toBeVisible();
-  await page
-    .getByRole("link", { name: "この作業を開く", exact: true })
-    .click();
+  await page.getByRole("link", { name: "この作業を開く", exact: true }).click();
   await expect(page).toHaveURL(/\/work-items\/[0-9a-f-]+$/);
   await expect(
     page.locator("form").getByText(returnReason, { exact: true }),
@@ -334,10 +337,10 @@ test("経費申請を差し戻し、再申請、承認、経理完了まで処�
     .click();
 
   await expect(page).toHaveURL(caseUrl);
-  await expect(page.getByText("承認 1回目 · 差し戻し", { exact: true })).toBeVisible();
-  await page
-    .getByRole("link", { name: "この作業を開く", exact: true })
-    .click();
+  await expect(
+    page.getByText("承認 1回目 · 差し戻し", { exact: true }),
+  ).toBeVisible();
+  await page.getByRole("link", { name: "この作業を開く", exact: true }).click();
   await expect(page).toHaveURL(/\/work-items\/[0-9a-f-]+$/);
   await page.getByLabel("判断理由").fill("規程と領収書情報を確認しました。");
   await page.getByRole("button", { name: "承認する", exact: true }).click();
@@ -346,9 +349,7 @@ test("経費申請を差し戻し、再申請、承認、経理完了まで処�
   await expect(
     page.getByText("経理処理", { exact: true }).first(),
   ).toBeVisible();
-  await page
-    .getByRole("link", { name: "この作業を開く", exact: true })
-    .click();
+  await page.getByRole("link", { name: "この作業を開く", exact: true }).click();
   await expect(page).toHaveURL(/\/work-items\/[0-9a-f-]+$/);
   await page.getByLabel(/処理日/).fill("2026-08-11");
   await page.getByLabel(/処理参照番号/).fill("ACC-2026-0001");
@@ -365,8 +366,12 @@ test("経費申請を差し戻し、再申請、承認、経理完了まで処�
     page.getByRole("heading", { name: "経理処理結果と証跡", level: 2 }),
   ).toBeVisible();
   await expect(page.getByText("ACC-2026-0001", { exact: true })).toBeVisible();
-  await expect(page.getByText("振込データへ登録済み", { exact: true })).toBeVisible();
-  await expect(page.getByText("承認 2回目 · 承認", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("振込データへ登録済み", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("承認 2回目 · 承認", { exact: true }),
+  ).toBeVisible();
 
   await page.reload();
   await expect(page).toHaveURL(caseUrl);
@@ -379,6 +384,70 @@ test("経費申請を差し戻し、再申請、承認、経理完了まで処�
   ]) {
     await expect(page.getByText(activity, { exact: true })).toBeVisible();
   }
+});
+
+test("チャンネルを作成し、メッセージへ案件を添付して業務へ戻れる", async ({
+  page,
+}) => {
+  const fixture = await createWorkspace(page);
+  await page.goto(fixture.organizationUrl);
+  await page
+    .getByRole("link", { name: "新しい経費申請を始める", exact: true })
+    .click();
+  await page.getByLabel(/経費発生日/).fill("2026-08-10");
+  await page.getByLabel(/金額/).fill("4200");
+  await page.getByLabel(/用途/).fill("社内打ち合わせ用の備品購入");
+  await page.getByLabel(/支払先/).fill("サンプル文具店");
+  await page.getByLabel(/領収書情報/).fill("電子領収書 R-2026-CHAT");
+  await page
+    .getByRole("button", { name: "内容を確認して申請", exact: true })
+    .click();
+  await expect(page).toHaveURL(
+    new RegExp(`/organizations/${fixture.organizationSlug}/cases/[0-9a-f-]+$`),
+  );
+  const caseUrl = page.url();
+  const caseNumber = "EXP-0001";
+  await expect(
+    page.getByText(caseNumber, { exact: false }).first(),
+  ).toBeVisible();
+
+  await page
+    .getByRole("navigation", { name: "主ナビゲーション" })
+    .getByRole("link", { name: /コミュニケーション/ })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "チャンネル", level: 1 }),
+  ).toBeVisible();
+  await page.getByText("チャンネルを作成", { exact: true }).click();
+  await page.getByLabel("チャンネル名").fill("支払い処理相談");
+  await page
+    .getByLabel("説明")
+    .fill("承認後の支払い処理について案件を共有する場所");
+  await page.getByRole("button", { name: "作成する", exact: true }).click();
+  await expect(page).toHaveURL(/\/communication\?channel=[0-9a-f-]+$/);
+  await expect(
+    page.getByRole("heading", { name: "# 支払い処理相談", level: 2 }),
+  ).toBeVisible();
+
+  await page
+    .getByLabel("メッセージ")
+    .fill("この経費申請の支払い予定を確認してください。");
+  await page.getByLabel("案件を添付（任意）").selectOption({
+    label: `${caseNumber} · 経費申請 · 対応中`,
+  });
+  await page.getByRole("button", { name: "送信", exact: true }).click();
+
+  await expect(
+    page.getByText("この経費申請の支払い予定を確認してください。", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  const sharedCase = page.getByRole("link", {
+    name: new RegExp(`共有された案件 · ${caseNumber}`),
+  });
+  await expect(sharedCase).toBeVisible();
+  await sharedCase.click();
+  await expect(page).toHaveURL(caseUrl);
 });
 
 async function createWorkspace(page: Page) {
@@ -402,6 +471,13 @@ async function createWorkspace(page: Page) {
 
   const organizationUrl = new URL(page.url());
   const organizationPath = organizationUrl.pathname;
+  await page
+    .getByRole("navigation", { name: "主ナビゲーション" })
+    .getByRole("link", { name: /規定・文書/ })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "業務ナレッジ", level: 1 }),
+  ).toBeVisible();
   await page
     .getByRole("link", { name: "経費申請", exact: true })
     .first()

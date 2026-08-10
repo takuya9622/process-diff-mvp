@@ -160,6 +160,10 @@ src/app/
     ├── page.tsx
     ├── loading.tsx
     ├── not-found.tsx
+    ├── documents/page.tsx
+    ├── workflows/page.tsx
+    ├── cases/page.tsx
+    ├── communication/page.tsx
     ├── entities/[businessEntityId]/
     │   ├── page.tsx
     │   └── loading.tsx
@@ -175,16 +179,15 @@ URLのslugやクライアントから渡されたorganization IDは認可根拠�
 ### 6.2 アプリケーションシェル
 
 `organizations/[organizationSlug]/layout.tsx`を組織ワークスペースの共有境界とします。layoutで
-sessionとmembershipを検証し、ヘッダーと業務要素ナビゲーションを表示します。子routeの
+sessionとmembershipを検証し、責務別のアプリサイドバーを表示します。規定・文書routeでは
+業務要素ナビゲーションも表示します。子routeの
 Server Componentは認可済みorganization IDで対象リソースを取得します。layoutの検証だけを
 更新処理の認可根拠にはせず、Server Actionでもsession、membership、permissionを再検証します。
 
-ヘッダーへ次を常時表示します。
+サイドバーへ次を常時表示します。
 
-- 組織名と「業務スペース」ラベル
-- `あなた: <利用者名>`
-- `アクセス権限: オーナー / 編集者 / 閲覧者`
-- 「業務を起点に全体像を理解し、必要なときは安全に変更できる」という価値説明
+- 組織名、利用者名、`オーナー / 編集者 / 閲覧者`のアクセス権限
+- ダッシュボード、ワークフロー、規定・文書、コミュニケーションの主導線
 - サインアウト操作
 
 変更結果には変更者名と変更日時を表示します。サンプルは架空データであることを示しますが、

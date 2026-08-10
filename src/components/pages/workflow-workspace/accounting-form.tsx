@@ -25,12 +25,7 @@ export function AccountingForm({
     WorkflowActionResult | null,
     FormData
   >(
-    completeAccountingAction.bind(
-      null,
-      organizationSlug,
-      caseId,
-      workItemId,
-    ),
+    completeAccountingAction.bind(null, organizationSlug, caseId, workItemId),
     null,
   );
 
@@ -74,7 +69,8 @@ export function AccountingForm({
           />
         </label>
         <label className="text-sm font-semibold text-content-primary sm:col-span-2">
-          処理結果・証跡 <span className="text-status-danger-content">必須</span>
+          処理結果・証跡{" "}
+          <span className="text-status-danger-content">必須</span>
           <textarea
             name="result"
             required

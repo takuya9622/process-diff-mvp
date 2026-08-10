@@ -43,8 +43,8 @@ export function WorkItemWorkspace({
               {workItem.item.title}
             </h1>
             <p className="mt-1 text-sm text-content-secondary">
-              {workItem.caseDetail.workflowName} · {workItem.item.displayNumber} ·
-              {workItem.item.assignedRole}として対応
+              {workItem.caseDetail.workflowName} · {workItem.item.displayNumber}{" "}
+              ·{workItem.item.assignedRole}として対応
             </p>
           </div>
           <Link
@@ -79,7 +79,10 @@ export function WorkItemWorkspace({
           aria-labelledby="work-action-title"
           className="rounded-3xl border border-outline bg-surface-muted p-5 sm:p-6"
         >
-          <h2 id="work-action-title" className="text-xl font-bold text-content-primary">
+          <h2
+            id="work-action-title"
+            className="text-xl font-bold text-content-primary"
+          >
             {canAct ? "この作業を完了" : "作業内容"}
           </h2>
           {!canAct ? (
@@ -98,9 +101,7 @@ export function WorkItemWorkspace({
             <div className="mt-5">
               <ExpenseCaseForm
                 organizationSlug={organizationSlug}
-                workflowDefinitionId={
-                  workItem.caseDetail.workflowDefinitionId
-                }
+                workflowDefinitionId={workItem.caseDetail.workflowDefinitionId}
                 relatedProcessEntityId={
                   workItem.caseDetail.relatedProcessEntityId
                 }
@@ -150,7 +151,8 @@ export function WorkItemWorkspace({
               <li>• 経費規程</li>
             </ul>
             <p className="mt-3 text-xs leading-5 text-content-tertiary">
-              申請者: {workItem.caseDetail.initiatedByName} · workflow version {workItem.caseDetail.workflowVersionNumber}
+              申請者: {workItem.caseDetail.initiatedByName} · workflow version{" "}
+              {workItem.caseDetail.workflowVersionNumber}
             </p>
           </section>
         </aside>

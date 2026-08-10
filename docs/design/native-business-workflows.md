@@ -148,8 +148,9 @@ Connectorの失敗や停止で案件全体の正規状態を失わないよう�
 | `Approval` | 承認対象、承認者、方式、判断、理由を表す |
 | `Decision` | 承認以外を含む人またはruleの判断結果と根拠を表す |
 | `Artifact` | 添付、証憑、生成文書、外部参照を案件へ関連付ける |
-| `Comment` | 案件またはstepの文脈に沿った連絡を保持する |
-| `Communication` | 宛先、本文、配送手段、review、送受信結果を案件の文脈で表す |
+| `Comment` | 将来、案件またはstepへ直接紐づく短い連絡を保持する |
+| `CommunicationChannel` / `CommunicationMessage` | 組織内の会話と任意の案件共有を外部providerに依存せず保持する |
+| `CommunicationDelivery` | 将来、宛先、配送手段、review、外部送受信結果をmessageへ関連付ける |
 | `ScheduleEntry` | 会議、訪問、予約、作業予定と参加者を表す |
 | `Activity` | 開始、割当、入力、判断、遷移、通知、例外対応を時系列で記録する |
 | `AuditEvent` | 重要操作の主体、対象、前後状態、権限文脈を改変防止を考慮して記録する |
@@ -277,7 +278,7 @@ Connectorの失敗や停止で案件全体の正規状態を失わないよう�
 | 承認と判断 | `Approval` / `Decision` | 外部承認を受け取る場合も、判断者と根拠を正規化する |
 | 文書と証憑 | `Artifact` | 外部ファイルの複製または参照、version、権限を管理する |
 | 予定と期限 | `ScheduleEntry` / `DueRule` / `BusinessCalendar` | 外部calendarへ予定を反映し、同期状態を管理する |
-| 通知と連絡 | `Notification` / `Communication` / `Comment` | メールやchatへ配送しても、案件内の文脈を保持する |
+| 通知と連絡 | `Notification` / `CommunicationChannel` / `CommunicationMessage` / `Comment` | メールやchatへ配送しても、ネイティブな会話と案件文脈を保持する |
 | 業務知識 | `BusinessEntity` / `Relation` | 外部情報から候補を作り、人の確認後に確定する |
 
 ### 9.2 Connectorの責務

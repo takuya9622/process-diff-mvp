@@ -40,10 +40,7 @@ export function WorkflowHome({
         </div>
         {primaryWorkflow && canMutate ? (
           <Link
-            href={createWorkflowStartPath(
-              organizationSlug,
-              primaryWorkflow.id,
-            )}
+            href={createWorkflowStartPath(organizationSlug, primaryWorkflow.id)}
             className="inline-flex min-h-11 items-center justify-center rounded-xl bg-action-primary px-4 py-2.5 text-sm font-semibold text-surface transition-colors hover:bg-action-primary-hover focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:outline-none"
           >
             新しい経費申請を始める
