@@ -1,8 +1,9 @@
-import { redirect } from "next/navigation";
-
-import { createEntityPath } from "@/constants/routes";
-import { requireOrganizationContext } from "@/lib/server/auth/session";
-import { getInitialWorkspaceEntityId } from "@/lib/server/workspace-service";
+import { WorkflowHome } from "@/components/pages/workflow-workspace/workflow-home";
+import {
+  hasWorkspacePermission,
+  requireOrganizationContext,
+} from "@/lib/server/auth/session";
+import { getWorkflowHomeData } from "@/lib/server/workflow-service";
 
 type OrganizationPageProps = {
   params: Promise<{ organizationSlug: string }>;
@@ -14,8 +15,17 @@ export default async function OrganizationPage({
   const { organizationSlug } = await params;
 
   const context = await requireOrganizationContext(organizationSlug);
-  const initialEntityId = await getInitialWorkspaceEntityId(
+  const data = await getWorkflowHomeData(
     context.organizationId,
+    context.user.id,
   );
-  redirect(createEntityPath(organizationSlug, initialEntityId));
+
+  return (
+    <WorkflowHome
+      organizationSlug={organizationSlug}
+      userName={context.user.name}
+      canMutate={hasWorkspacePermission(context.role, "change")}
+      data={data}
+    />
+  );
 }

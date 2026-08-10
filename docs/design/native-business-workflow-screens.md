@@ -4,7 +4,7 @@
 
 | 項目 | 内容 |
 |---|---|
-| 文書状態 | 次期MVP画面定義済み・実装前 |
+| 文書状態 | W-01〜W-06初回実装反映済み |
 | 対象 | 案件、作業、承認、期限、証跡を扱う組織別SPA |
 | 設計レベル | 画面、route、状態、権限、ユーザーフロー |
 | 最終更新日 | 2026-08-10 |
@@ -49,25 +49,26 @@
 
 ## 3. アプリケーションシェルとナビゲーション
 
-`/organizations/[organizationSlug]/layout.tsx`を組織別SPAの共通shellとして維持し、ヘッダー、
-主ナビゲーション、組織、利用者、アクセス権限をroute間で共有します。次期MVPでは、業務要素の
-一覧だけを常設ナビゲーションにする構成から、次の構成へ広げます。
+`/organizations/[organizationSlug]/layout.tsx`を組織別SPAの共通shellとして維持し、サイドバー、
+組織、利用者、アクセス権限をroute間で共有します。主ナビゲーションは責務ごとに次の構成へ
+分けます。
 
 | ナビゲーション | route | 表示対象 | 実装段階 |
 |---|---|---|---|
-| ホーム | `/organizations/<organizationSlug>` | 全利用者 | 次期MVP |
-| 業務を開始 | `/organizations/<organizationSlug>/workflows` | 開始可能な業務がある利用者 | 次期MVP |
-| 案件 | `/organizations/<organizationSlug>/cases` | 全利用者 | 次期MVP |
-| 業務知識 | 既存の`/organizations/<organizationSlug>/entities/<businessEntityId>` | 全利用者 | 実装済み |
+| ダッシュボード | `/organizations/<organizationSlug>` | 全利用者 | 初回実装済み |
+| 業務を開始 | `/organizations/<organizationSlug>/workflows` | 開始可能な業務がある利用者 | 初回実装済み |
+| 自分の案件 | `/organizations/<organizationSlug>/cases` | 全利用者 | 初回実装済み |
+| 規定・文書 | `/organizations/<organizationSlug>/documents`と既存の`/entities/<businessEntityId>` | 全利用者 | 実装済み |
+| コミュニケーション | `/organizations/<organizationSlug>/communication` | 全利用者 | 初回実装済み |
 | 業務データ | `/organizations/<organizationSlug>/records` | recordの参照権限がある利用者 | 後続 |
 | 業務設計 | `/organizations/<organizationSlug>/workflow-definitions` | 業務設計者、公開責任者 | 後続 |
 
 「設定」は主ナビゲーションと同じ強さで置かず、ヘッダーの組織メニューから開きます。
 外部連携を導入した後も、Integration設定を日常業務の完了導線には置きません。
 
-狭い画面では主ナビゲーションを開閉式にします。次期MVPの必須検証環境は現行要件どおり
-一般的なデスクトップですが、承認と短いコメントは狭い画面でも横スクロールなしで操作できる
-構造にします。
+狭い画面では主ナビゲーションを画面上部へ移し、区分ごとのリンクを横方向に表示します。
+次期MVPの必須検証環境は現行要件どおり一般的なデスクトップですが、承認と短いコメントは
+狭い画面でも横スクロールなしで操作できる構造にします。
 
 ## 4. routeと状態の置き場所
 
@@ -81,6 +82,8 @@
 | 案件一覧 | `/organizations/<organizationSlug>/cases` | 組織と、search paramsで表す絞り込み |
 | 案件詳細 | `/organizations/<organizationSlug>/cases/<caseId>` | 案件と現在状態 |
 | 作業実行 | `/organizations/<organizationSlug>/cases/<caseId>/work-items/<workItemId>` | 案件と操作対象の作業 |
+| 規定・文書 | `/organizations/<organizationSlug>/documents` | 組織とナレッジ分類 |
+| コミュニケーション | `/organizations/<organizationSlug>/communication?channel=<channelId>` | 組織と選択中チャンネル |
 
 現行の`/entities/<businessEntityId>`と`/changes/<changeSetId>`は変更しません。組織routeの入口だけを
 経費申請の業務知識からW-01ホームへ変更し、業務知識は主ナビゲーションと案件内linkから開きます。
@@ -100,12 +103,12 @@
 
 | ID | 画面 | 主な利用者 | 実装段階 | 目的 |
 |---|---|---|---|---|
-| W-01 | ホーム | 全利用者 | 次期MVP | 自分が今行うことと、注意が必要な案件を把握する |
-| W-02 | 業務カタログ | 申請者、依頼者 | 次期MVP | 開始権限のある業務を探す |
-| W-03 | 業務開始・申請入力 | 申請者、依頼者 | 次期MVP | 必要情報を入力し、下書き保存または申請する |
-| W-04 | 案件一覧 | 全利用者、業務責任者 | 次期MVP | 権限範囲の案件を状態、業務、担当、期限から探す |
-| W-05 | 案件詳細 | 案件関係者、参照者 | 次期MVP | 現在地、入力、担当、判断、証跡、Activityを確認する |
-| W-06 | 作業実行 | 担当者、承認者、差し戻しを受けた申請者 | 次期MVP | 案件の文脈内で一つの作業または判断を完了する |
+| W-01 | ホーム | 全利用者 | 初回実装済み | 自分が今行うことと、注意が必要な案件を把握する |
+| W-02 | 業務カタログ | 申請者、依頼者 | 初回実装済み | 開始権限のある業務を探す |
+| W-03 | 業務開始・申請入力 | 申請者、依頼者 | 初回実装済み | 必要情報を入力し、下書き保存または申請する |
+| W-04 | 案件一覧 | 全利用者、業務責任者 | 初回実装済み | 権限範囲の案件を状態、業務、担当、期限から探す |
+| W-05 | 案件詳細 | 案件関係者、参照者 | 初回実装済み | 現在地、入力、担当、判断、証跡、Activityを確認する |
+| W-06 | 作業実行 | 担当者、承認者、差し戻しを受けた申請者 | 初回実装済み | 案件の文脈内で一つの作業または判断を完了する |
 | W-07 | 業務データ一覧 | 担当者、参照者 | 後続 | 顧客、取引先、契約、請求、資産などを横断して探す |
 | W-08 | 業務データ詳細 | 担当者、参照者 | 後続 | recordの現在値、関連案件、証跡を確認する |
 | W-09 | 業務定義一覧・詳細 | 業務設計者、公開責任者 | 後続 | 公開中versionとdraft、関連PROCESSを確認する |
@@ -114,10 +117,14 @@
 | W-12 | 業務定義公開結果 | 公開責任者 | 後続 | 新versionの公開結果と適用範囲を確認する |
 | W-13 | 組織・業務担当設定 | owner、委任された管理者 | 実装方法決定後 | membershipと業務上の役割、代理を設定する |
 | W-14 | Integration設定 | owner、委任された管理者 | 外部連携段階 | Connector、mapping、同期状態を管理する |
+| C-01 | コミュニケーション | 全利用者 | 初回実装済み | 組織内チャンネルで相談し、案件を共有する |
 
 W-07以降も到達点には必要ですが、最初の経費申請を完了するための実装範囲には含めません。
 ただしW-13で扱う承認者と経理担当の割当は実行に必要なため、次期MVPではseedまたは実装前に
 確定する最小設定方式で準備し、画面を先に作ることを開始条件にはしません。
+
+C-01のチャンネル、投稿、案件共有、外部連携境界は
+[ネイティブコミュニケーション設計](native-communication.md)を正本とします。
 
 ### 5.2 W-01 ホーム
 
@@ -228,7 +235,7 @@ W-06は`WorkItem`の種類に応じて操作領域を切り替え、案件の共
 | `Approval` / `Decision` | W-06 | W-05、W-06 |
 | `Artifact` | W-03、W-06 | W-05、W-06 |
 | `Comment` | W-05、W-06 | W-05 |
-| `Communication` | 後続のW-06連絡作業 | W-05、W-06 |
+| `Communication` | C-01チャンネル、メッセージ、案件共有 | C-01、共有先のW-05 |
 | `ScheduleEntry` | 後続のW-06予定作業 | W-01、W-05、W-06 |
 | `Activity` | 各更新から自動記録 | W-05 |
 | `Notification` | 各遷移から自動作成 | W-01、対象のW-05またはW-06 |
@@ -336,7 +343,7 @@ membership role、Business Graphの`ROLE`、`BusinessRoleAssignment`、個別`Wo
 - 全組織横断の監査log、保持期間、exportの管理画面
 - 通知専用画面。W-01と案件内Activityを先に使う
 
-これらを作らなくても、W-01〜W-06と既存の業務知識画面だけで、経費申請を開始から完了まで
+これらを作らなくても、W-01〜W-06、規定・文書、C-01コミュニケーションで、経費申請を開始から完了まで
 アプリ内で処理できることを次期MVPの画面完成条件とします。
 
 ## 11. 画面受け入れ条件
@@ -351,14 +358,16 @@ membership role、Business Graphの`ROLE`、`BusinessRoleAssignment`、個別`Wo
 8. 関連するPROCESS、RULE、DOCUMENT、ROLEを案件から既存の業務知識画面で確認できる。
 9. 権限のない利用者は、画面表示とServer Actionのどちらからも判断や完了操作を実行できない。
 10. 外部APIまたはConnectorがなくても、上記の中核フローを完了できる。
+11. C-01でチャンネルを作成し、案件付きメッセージを投稿してW-05へ戻れる。
 
-## 12. 画面実装前に残る判断
+## 12. 初回実装で確定した判断
 
-画面の種類と導線はこの文書で確定します。実装へ入る前に、次をドメイン、table、権限設計で
-確定する必要があります。
-
-- 固定サンプルで承認者と経理担当をどのmembershipへ割り当てるか
-- 領収書ファイルを初回から保存するか、領収書の構造化情報だけで開始するか
-- 期限を暦日で固定するか、最初から`BusinessCalendar`を使うか
-- W-13より先に必要な最小のmembership追加と業務役割割当をどう提供するか
-- Activity表示用recordと監査イベントを最初のschemaでどこまで分離するか
+- 固定サンプルは一人の認証済みmemberへ申請者、承認者、経理担当を割り当てる。実利用者IDと
+  業務役割はWorkItemとActivityで分けて保存し、W-13の再割当へ移行できるようにする。
+- 初回は領収書ファイル本体を保存せず、領収書番号などの参照情報を必須の構造化項目として扱う。
+- 期限はWorkItem作成時刻からの暦日で計算し、BusinessCalendarは後続とする。
+- Activityは案件画面の利用者向け履歴として保存し、改変防止を考慮したAuditEventは後続とする。
+- ownerとeditorは更新操作、viewerは参照だけを行える。各Server Actionでsession、membership、
+  organization、担当WorkItemを再検証する。
+- W-04は初回サンプルでは開始者本人の案件を表示する。関係者全員や業務責任者の絞り込みは、
+  複数memberと業務役割割当を導入するときに追加する。

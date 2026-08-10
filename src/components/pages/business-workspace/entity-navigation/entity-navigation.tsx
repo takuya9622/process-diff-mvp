@@ -38,11 +38,11 @@ export function EntityNavigation({
   return (
     <aside
       aria-labelledby="entity-navigation-title"
-      className="rounded-3xl border border-outline bg-surface p-3 shadow-panel lg:sticky lg:top-5 lg:max-h-[calc(100vh-2.5rem)] lg:overflow-y-auto"
+      className="rounded-3xl border border-outline bg-surface p-3 xl:sticky xl:top-7 xl:max-h-[calc(100vh-3.5rem)] xl:overflow-y-auto"
     >
       <div className="px-2 pt-2 pb-3">
         <p className="text-xs font-bold tracking-[0.14em] text-action-primary uppercase">
-          業務知識
+          規定・文書
         </p>
         <h2
           id="entity-navigation-title"
@@ -51,7 +51,7 @@ export function EntityNavigation({
           経費精算
         </h2>
         <p className="mt-1 text-xs leading-5 text-content-tertiary">
-          ページを探して、関係をたどる
+          規定、手順、役割、利用システムを探す
         </p>
       </div>
 
