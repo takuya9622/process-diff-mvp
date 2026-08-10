@@ -30,6 +30,47 @@ describe("getBetterAuthEnvironment", () => {
     ).toThrow("BETTER_AUTH_SECRET must contain at least 32 characters.");
   });
 
+  it("derives the Preview origin from the Vercel branch URL", () => {
+    expect(
+      getBetterAuthEnvironment({
+        BETTER_AUTH_SECRET: validEnvironment.BETTER_AUTH_SECRET,
+        VERCEL_ENV: "preview",
+        VERCEL_BRANCH_URL: "process-diff-mvp-git-feature.vercel.app",
+        VERCEL_URL: "process-diff-mvp-unique.vercel.app",
+      }).baseURL,
+    ).toBe("https://process-diff-mvp-git-feature.vercel.app");
+  });
+
+  it("prefers an explicit URL in Vercel Preview", () => {
+    expect(
+      getBetterAuthEnvironment({
+        ...validEnvironment,
+        VERCEL_ENV: "preview",
+        VERCEL_BRANCH_URL: "process-diff-mvp-git-feature.vercel.app",
+      }).baseURL,
+    ).toBe("http://localhost:3000");
+  });
+
+  it("falls back to the Vercel deployment URL when a branch URL is unavailable", () => {
+    expect(
+      getBetterAuthEnvironment({
+        BETTER_AUTH_SECRET: validEnvironment.BETTER_AUTH_SECRET,
+        VERCEL_ENV: "preview",
+        VERCEL_URL: "process-diff-mvp-unique.vercel.app",
+      }).baseURL,
+    ).toBe("https://process-diff-mvp-unique.vercel.app");
+  });
+
+  it("requires an explicit URL outside Vercel Preview", () => {
+    expect(() =>
+      getBetterAuthEnvironment({
+        BETTER_AUTH_SECRET: validEnvironment.BETTER_AUTH_SECRET,
+        VERCEL_ENV: "production",
+        VERCEL_URL: "process-diff-mvp.vercel.app",
+      }),
+    ).toThrow("BETTER_AUTH_URL is not configured.");
+  });
+
   it("rejects a URL that is not an origin", () => {
     expect(() =>
       getBetterAuthEnvironment({

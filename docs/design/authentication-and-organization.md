@@ -333,7 +333,9 @@ Requestへ記録します。認証テーブルや実在データを同じreset�
 ## 12. セキュリティ設計
 
 - `BETTER_AUTH_SECRET`は32文字以上の高entropy値を環境ごとに設定し、commitしない。
-- `BETTER_AUTH_URL`とtrusted originsをlocal、Preview、Productionごとに明示する。
+- `BETTER_AUTH_URL`はlocalとProductionで明示する。Previewでは明示値を優先し、未設定の場合だけ
+  Vercelの`VERCEL_BRANCH_URL`または`VERCEL_URL`からHTTPS originを組み立てる。
+- trusted originsは追加が必要な実originだけを明示し、wildcardを使用しない。
 - wildcard origin、CSRF check無効化、origin check無効化は使用しない。
 - ProductionではHTTPS、secure、httpOnly、sameSite cookieを維持する。
 - rate limitはProductionで有効にし、PostgreSQL storageを使用する。

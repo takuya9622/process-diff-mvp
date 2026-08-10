@@ -93,7 +93,8 @@ docker compose --profile test run --rm --build e2e
 コピーし、`.env`はコミットしません。
 
 - `BETTER_AUTH_SECRET`: 32文字以上。Productionでは高entropyのランダム値を使用する
-- `BETTER_AUTH_URL`: アプリケーションの公開origin
+- `BETTER_AUTH_URL`: アプリケーションの公開origin。localとProductionでは必須。Vercel Previewは
+  未設定の場合に`VERCEL_BRANCH_URL`または`VERCEL_URL`から自動設定する
 - `BETTER_AUTH_TRUSTED_ORIGINS`: 追加で許可するoriginをカンマ区切りで指定する。wildcard不可
 
 VercelのPreviewとProductionでは、Vercel上のEnvironment Variablesを使用します。
