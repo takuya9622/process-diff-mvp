@@ -3,9 +3,15 @@
 import { useMemo, useState } from "react";
 import type { MouseEventHandler } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 import { BUSINESS_ENTITY_TYPES } from "@/constants/business-entity";
-import { createEntityPath } from "@/constants/routes";
+import {
+  createCasesPath,
+  createEntityPath,
+  createOrganizationPath,
+  createWorkflowCatalogPath,
+} from "@/constants/routes";
 import type { WorkspaceNavigationEntity } from "@/types/workspace";
 
 export function EntityNavigation({
@@ -19,7 +25,31 @@ export function EntityNavigation({
   selectedEntityId: string | null;
   onNavigate: MouseEventHandler<HTMLAnchorElement>;
 }) {
+  const pathname = usePathname();
   const [query, setQuery] = useState("");
+  const organizationPath = createOrganizationPath(organizationSlug);
+  const primaryNavigation = [
+    {
+      label: "ホーム",
+      description: "対応待ちと最近の案件",
+      href: organizationPath,
+      isActive: pathname === organizationPath,
+    },
+    {
+      label: "業務を開始",
+      description: "公開済みの業務から選ぶ",
+      href: createWorkflowCatalogPath(organizationSlug),
+      isActive: pathname.startsWith(
+        createWorkflowCatalogPath(organizationSlug),
+      ),
+    },
+    {
+      label: "案件",
+      description: "現在地と証跡を確認",
+      href: createCasesPath(organizationSlug),
+      isActive: pathname.startsWith(createCasesPath(organizationSlug)),
+    },
+  ];
   const normalizedQuery = query.trim().toLocaleLowerCase("ja-JP");
   const visibleEntities = useMemo(
     () =>
@@ -40,6 +70,33 @@ export function EntityNavigation({
       aria-labelledby="entity-navigation-title"
       className="rounded-3xl border border-outline bg-surface p-3 shadow-panel lg:sticky lg:top-5 lg:max-h-[calc(100vh-2.5rem)] lg:overflow-y-auto"
     >
+      <nav aria-label="業務" className="border-b border-outline px-1 pb-4">
+        <p className="px-2 pt-1 text-[0.7rem] font-bold tracking-[0.12em] text-content-tertiary uppercase">
+          業務
+        </p>
+        <ul className="mt-1 space-y-1">
+          {primaryNavigation.map((item) => (
+            <li key={item.href}>
+              <Link
+                href={item.href}
+                aria-current={item.isActive ? "page" : undefined}
+                onClick={onNavigate}
+                className={`block rounded-xl px-3 py-2.5 transition-colors focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none ${
+                  item.isActive
+                    ? "bg-action-muted text-action-primary"
+                    : "text-content-secondary hover:bg-surface-muted hover:text-content-primary"
+                }`}
+              >
+                <span className="block text-sm font-bold">{item.label}</span>
+                <span className="mt-0.5 block text-xs opacity-80">
+                  {item.description}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
+
       <div className="px-2 pt-2 pb-3">
         <p className="text-xs font-bold tracking-[0.14em] text-action-primary uppercase">
           業務知識

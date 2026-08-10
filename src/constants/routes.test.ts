@@ -2,9 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import {
   createChangePath,
+  createCasePath,
+  createCasesPath,
   createEntityPath,
   createOrganizationPath,
   createSignInPath,
+  createWorkflowCatalogPath,
+  createWorkflowStartPath,
+  createWorkItemPath,
   sanitizeReturnTo,
 } from "@/constants/routes";
 
@@ -18,6 +23,21 @@ describe("workspace routes", () => {
     );
     expect(createChangePath("sample team", "change/id")).toBe(
       "/organizations/sample%20team/changes/change%2Fid",
+    );
+    expect(createWorkflowCatalogPath("sample team")).toBe(
+      "/organizations/sample%20team/workflows",
+    );
+    expect(createWorkflowStartPath("sample team", "workflow/id")).toBe(
+      "/organizations/sample%20team/workflows/workflow%2Fid/start",
+    );
+    expect(createCasesPath("sample team")).toBe(
+      "/organizations/sample%20team/cases",
+    );
+    expect(createCasePath("sample team", "case/id")).toBe(
+      "/organizations/sample%20team/cases/case%2Fid",
+    );
+    expect(createWorkItemPath("sample team", "case/id", "work/item")).toBe(
+      "/organizations/sample%20team/cases/case%2Fid/work-items/work%2Fitem",
     );
   });
 

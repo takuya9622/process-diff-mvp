@@ -17,7 +17,20 @@ import {
   businessRelations,
   changeSets,
   entityVersions,
+  workflowCases,
+  workflowDefinitions,
+  workflowFieldDefinitions,
+  workflowStepDefinitions,
+  workflowVersions,
 } from "@/lib/server/database/schema";
+import {
+  completeAccountingWorkItem,
+  decideApproval,
+  getCaseDetail,
+  getWorkflowCatalog,
+  resubmitExpenseCase,
+  saveExpenseCase,
+} from "@/lib/server/workflow-service";
 import {
   getChangeWorkspaceData,
   getEntityWorkspaceData,
@@ -32,7 +45,7 @@ const organizationIds = [
 ];
 const userIds = [primaryFixture.userId, secondaryFixture.userId];
 
-describe("confirmChange", () => {
+describe("organization-scoped demo services", () => {
   beforeAll(async () => {
     await insertFixture(primaryFixture);
     await insertFixture(secondaryFixture);
@@ -216,6 +229,129 @@ describe("confirmChange", () => {
       }),
     ).rejects.toThrow();
   });
+
+  it("差し戻しから再申請、承認、経理処理まで案件と証跡を保存する", async () => {
+    const [workflow] = await getWorkflowCatalog(
+      primaryFixture.organizationId,
+    );
+    expect(workflow?.name).toBe("経費申請");
+    if (!workflow) {
+      throw new Error("Expense workflow was not found.");
+    }
+
+    const initialInput = {
+      expenseDate: "2026-08-10",
+      amount: "12800",
+      purpose: "顧客訪問のための交通費",
+      payee: "東海旅客鉄道",
+      receiptReference: "電子領収書 R-2026-0810",
+    };
+    const submitted = await saveExpenseCase(
+      primaryFixture.organizationId,
+      primaryFixture.userId,
+      workflow.id,
+      initialInput,
+      "submit",
+    );
+    expect(submitted.status).toBe("success");
+    if (submitted.status !== "success" || !submitted.workItemId) {
+      throw new Error("Expense case was not submitted.");
+    }
+
+    const returned = await decideApproval(
+      primaryFixture.organizationId,
+      primaryFixture.userId,
+      submitted.caseId,
+      submitted.workItemId,
+      "return",
+      "訪問先と商談目的を追記してください。",
+    );
+    expect(returned.status).toBe("success");
+    if (returned.status !== "success" || !returned.workItemId) {
+      throw new Error("Expense case was not returned.");
+    }
+
+    expect(
+      await decideApproval(
+        primaryFixture.organizationId,
+        primaryFixture.userId,
+        submitted.caseId,
+        submitted.workItemId,
+        "approve",
+        "",
+      ),
+    ).toMatchObject({ status: "conflict" });
+
+    const resubmitted = await resubmitExpenseCase(
+      primaryFixture.organizationId,
+      primaryFixture.userId,
+      submitted.caseId,
+      returned.workItemId,
+      {
+        ...initialInput,
+        purpose: "株式会社サンプルとの更新商談に伴う顧客訪問の交通費",
+      },
+    );
+    expect(resubmitted.status).toBe("success");
+    if (resubmitted.status !== "success" || !resubmitted.workItemId) {
+      throw new Error("Expense case was not resubmitted.");
+    }
+
+    const approved = await decideApproval(
+      primaryFixture.organizationId,
+      primaryFixture.userId,
+      submitted.caseId,
+      resubmitted.workItemId,
+      "approve",
+      "規程と領収書情報を確認しました。",
+    );
+    expect(approved.status).toBe("success");
+    if (approved.status !== "success" || !approved.workItemId) {
+      throw new Error("Expense case was not approved.");
+    }
+
+    const completed = await completeAccountingWorkItem(
+      primaryFixture.organizationId,
+      primaryFixture.userId,
+      submitted.caseId,
+      approved.workItemId,
+      {
+        processedDate: "2026-08-11",
+        reference: "ACC-2026-0001",
+        result: "振込データへ登録済み",
+      },
+    );
+    expect(completed.status).toBe("success");
+
+    const caseDetail = await getCaseDetail(
+      primaryFixture.organizationId,
+      submitted.caseId,
+    );
+    expect(caseDetail).toMatchObject({
+      status: "COMPLETED",
+      currentStepKey: "complete",
+      approvals: [
+        { attempt: 1, status: "RETURNED" },
+        { attempt: 2, status: "APPROVED" },
+      ],
+    });
+    expect(
+      caseDetail?.fields.find((field) => field.key === "accounting_reference")
+        ?.value,
+    ).toBe("ACC-2026-0001");
+    expect(caseDetail?.activities.map((activity) => activity.type)).toEqual(
+      expect.arrayContaining([
+        "SUBMITTED",
+        "RETURNED",
+        "RESUBMITTED",
+        "APPROVED",
+        "COMPLETED",
+      ]),
+    );
+    expect(
+      await getCaseDetail(secondaryFixture.organizationId, submitted.caseId),
+    ).toBeNull();
+  });
 });
 
 type Fixture = ReturnType<typeof createFixture>;
@@ -256,6 +392,21 @@ async function insertFixture(fixture: Fixture) {
 }
 
 async function deleteFixtureData() {
+  await database
+    .delete(workflowCases)
+    .where(inArray(workflowCases.organizationId, organizationIds));
+  await database
+    .delete(workflowFieldDefinitions)
+    .where(inArray(workflowFieldDefinitions.organizationId, organizationIds));
+  await database
+    .delete(workflowStepDefinitions)
+    .where(inArray(workflowStepDefinitions.organizationId, organizationIds));
+  await database
+    .delete(workflowVersions)
+    .where(inArray(workflowVersions.organizationId, organizationIds));
+  await database
+    .delete(workflowDefinitions)
+    .where(inArray(workflowDefinitions.organizationId, organizationIds));
   await database
     .delete(changeSets)
     .where(inArray(changeSets.organizationId, organizationIds));

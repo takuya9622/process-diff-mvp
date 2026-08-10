@@ -13,6 +13,33 @@ export function createEntityPath(
   return `${createOrganizationPath(organizationSlug)}/entities/${encodeURIComponent(businessEntityId)}`;
 }
 
+export function createWorkflowCatalogPath(organizationSlug: string) {
+  return `${createOrganizationPath(organizationSlug)}/workflows`;
+}
+
+export function createWorkflowStartPath(
+  organizationSlug: string,
+  workflowDefinitionId: string,
+) {
+  return `${createWorkflowCatalogPath(organizationSlug)}/${encodeURIComponent(workflowDefinitionId)}/start`;
+}
+
+export function createCasesPath(organizationSlug: string) {
+  return `${createOrganizationPath(organizationSlug)}/cases`;
+}
+
+export function createCasePath(organizationSlug: string, caseId: string) {
+  return `${createCasesPath(organizationSlug)}/${encodeURIComponent(caseId)}`;
+}
+
+export function createWorkItemPath(
+  organizationSlug: string,
+  caseId: string,
+  workItemId: string,
+) {
+  return `${createCasePath(organizationSlug, caseId)}/work-items/${encodeURIComponent(workItemId)}`;
+}
+
 export function createChangePath(
   organizationSlug: string,
   changeSetId: string,

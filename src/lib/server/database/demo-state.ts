@@ -13,8 +13,18 @@ import {
   businessEntities,
   businessRelations,
   changeSets,
+  workflowCases,
+  workflowDefinitions,
+  workflowFieldDefinitions,
+  workflowStepDefinitions,
+  workflowVersions,
   entityVersions,
 } from "@/lib/server/database/schema";
+import {
+  EXPENSE_WORKFLOW_FIELD_SEEDS,
+  EXPENSE_WORKFLOW_KEY,
+  EXPENSE_WORKFLOW_STEP_SEEDS,
+} from "@/lib/server/database/workflow-seed-data";
 
 type DatabaseTransaction = Parameters<
   Parameters<typeof database.transaction>[0]
@@ -46,6 +56,12 @@ export async function seedDemoState(organizationId: string) {
         );
       }
 
+      await insertDemoWorkflowState(
+        transaction,
+        organizationId,
+        initialEntity.id,
+      );
+
       return { initialEntityId: initialEntity.id, created: false };
     }
 
@@ -54,9 +70,50 @@ export async function seedDemoState(organizationId: string) {
   });
 }
 
+export async function ensureDemoWorkflowState(organizationId: string) {
+  return database.transaction(async (transaction) => {
+    await lockOrganizationDemoState(transaction, organizationId);
+    const [initialEntity] = await transaction
+      .select({ id: businessEntities.id })
+      .from(businessEntities)
+      .where(
+        and(
+          eq(businessEntities.organizationId, organizationId),
+          eq(businessEntities.name, INITIAL_DEMO_ENTITY_NAME),
+        ),
+      )
+      .limit(1);
+
+    if (!initialEntity) {
+      throw new Error("The initial demo process is missing.");
+    }
+
+    return insertDemoWorkflowState(
+      transaction,
+      organizationId,
+      initialEntity.id,
+    );
+  });
+}
+
 export async function resetDemoState(organizationId: string) {
   return database.transaction(async (transaction) => {
     await lockOrganizationDemoState(transaction, organizationId);
+    await transaction
+      .delete(workflowCases)
+      .where(eq(workflowCases.organizationId, organizationId));
+    await transaction
+      .delete(workflowFieldDefinitions)
+      .where(eq(workflowFieldDefinitions.organizationId, organizationId));
+    await transaction
+      .delete(workflowStepDefinitions)
+      .where(eq(workflowStepDefinitions.organizationId, organizationId));
+    await transaction
+      .delete(workflowVersions)
+      .where(eq(workflowVersions.organizationId, organizationId));
+    await transaction
+      .delete(workflowDefinitions)
+      .where(eq(workflowDefinitions.organizationId, organizationId));
     await transaction
       .delete(changeSets)
       .where(eq(changeSets.organizationId, organizationId));
@@ -129,7 +186,86 @@ async function insertDemoState(
     })),
   );
 
-  return requireSeedId(entityIdsBySeedKey, INITIAL_DEMO_ENTITY_KEY);
+  const initialEntityId = requireSeedId(
+    entityIdsBySeedKey,
+    INITIAL_DEMO_ENTITY_KEY,
+  );
+  await insertDemoWorkflowState(transaction, organizationId, initialEntityId);
+  return initialEntityId;
+}
+
+async function insertDemoWorkflowState(
+  transaction: DatabaseTransaction,
+  organizationId: string,
+  relatedProcessEntityId: string,
+) {
+  const [existingDefinition] = await transaction
+    .select({ id: workflowDefinitions.id })
+    .from(workflowDefinitions)
+    .where(
+      and(
+        eq(workflowDefinitions.organizationId, organizationId),
+        eq(workflowDefinitions.definitionKey, EXPENSE_WORKFLOW_KEY),
+      ),
+    )
+    .limit(1);
+
+  if (existingDefinition) {
+    return existingDefinition.id;
+  }
+
+  const now = new Date();
+  const workflowDefinitionId = randomUUID();
+  const workflowVersionId = randomUUID();
+
+  await transaction.insert(workflowDefinitions).values({
+    id: workflowDefinitionId,
+    organizationId,
+    definitionKey: EXPENSE_WORKFLOW_KEY,
+    name: "経費申請",
+    description:
+      "業務上立て替えた経費を申請し、承認と経理処理を経て完了します。",
+    relatedProcessEntityId,
+    createdAt: now,
+  });
+  await transaction.insert(workflowVersions).values({
+    id: workflowVersionId,
+    organizationId,
+    workflowDefinitionId,
+    versionNumber: 1,
+    status: "PUBLISHED",
+    publishedAt: now,
+    createdAt: now,
+  });
+  await transaction.insert(workflowFieldDefinitions).values(
+    EXPENSE_WORKFLOW_FIELD_SEEDS.map((field) => ({
+      id: randomUUID(),
+      organizationId,
+      workflowVersionId,
+      fieldKey: field.key,
+      label: field.label,
+      fieldType: field.type,
+      stepKey: field.stepKey,
+      isRequired: field.required,
+      position: field.position,
+      description: field.description,
+    })),
+  );
+  await transaction.insert(workflowStepDefinitions).values(
+    EXPENSE_WORKFLOW_STEP_SEEDS.map((step) => ({
+      id: randomUUID(),
+      organizationId,
+      workflowVersionId,
+      stepKey: step.key,
+      name: step.name,
+      stepType: step.type,
+      assignedRole: step.assignedRole,
+      dueDays: step.dueDays,
+      position: step.position,
+    })),
+  );
+
+  return workflowDefinitionId;
 }
 
 function requireSeedId(idsBySeedKey: ReadonlyMap<string, string>, key: string) {

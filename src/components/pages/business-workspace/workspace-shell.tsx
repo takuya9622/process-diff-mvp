@@ -13,7 +13,7 @@ import { useRouter } from "next/navigation";
 import { resetDemoAction } from "@/app/actions";
 import { EntityNavigation } from "@/components/pages/business-workspace/entity-navigation/entity-navigation";
 import { WorkspaceHeader } from "@/components/pages/business-workspace/workspace-header";
-import { createEntityPath } from "@/constants/routes";
+import { createOrganizationPath } from "@/constants/routes";
 import type { WorkspaceNavigationEntity } from "@/types/workspace";
 
 type WorkspaceRouteState = {
@@ -63,7 +63,7 @@ export function WorkspaceShell({
 
   function resetDemo() {
     const confirmed = window.confirm(
-      "この組織のすべての変更内容と変更履歴を削除し、初期状態へ戻します。続けますか？",
+      "この組織の案件、作業、変更内容、変更履歴を削除し、初期状態へ戻します。続けますか？",
     );
 
     if (!confirmed) {
@@ -75,7 +75,7 @@ export function WorkspaceShell({
       const result = await resetDemoAction(organizationSlug);
 
       if (result.status === "success") {
-        router.push(createEntityPath(organizationSlug, result.initialEntityId));
+        router.push(createOrganizationPath(organizationSlug));
         router.refresh();
         return;
       }

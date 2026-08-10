@@ -47,10 +47,10 @@ export function WorkspaceHeader({
               </span>
             </div>
             <p className="text-xs text-content-secondary">
-              業務知識ワークスペース · {organizationName} · あなた: {userName}
+              業務実行ワークスペース · {organizationName} · あなた: {userName}
             </p>
             <p className="mt-0.5 text-xs text-content-tertiary">
-              業務を起点に全体像を理解し、必要なときは安全に変更できる
+              申請から承認・実行・証跡まで、業務をこのアプリで完結する
             </p>
           </div>
         </div>
