@@ -5,8 +5,8 @@
 | 項目 | 内容 |
 |---|---|
 | 文書状態 | 現行MVPへ反映済み |
-| 対象 | 組織別サンプル、競合、リセット |
-| 最終更新日 | 2026-08-09 |
+| 対象 | 組織別の業務知識・経費申請サンプル、競合、リセット |
+| 最終更新日 | 2026-08-10 |
 
 この文書では、認証・組織追加後のサンプル状態の所有単位と、変更競合、サンプルリセットを
 定義します。永続化する構造は[MVPテーブル設計](table-design.md)、認証と権限の境界は
@@ -18,6 +18,8 @@
 現行MVPでは、一つの共有サンプル状態を終了し、組織ごとに独立した状態を保持します。
 
 - `BusinessEntity`、`Relation`、`EntityVersion`、`ChangeSet`は必ず一つの組織に属する。
+- WorkflowDefinition、WorkflowVersion、FieldDefinition、StepDefinition、Case、CaseFieldValue、
+  WorkItem、Approval、Activityも必ず一つの組織に属する。
 - 別組織は同じ架空シナリオから開始しても、row ID、現在状態、履歴を共有しない。
 - 利用者はmembershipを持つ組織の状態だけを参照・更新できる。
 - 変更確定は同じ組織のほかの所属者から見えるが、別組織からは見えない。
@@ -35,12 +37,14 @@
 - 15件の関係
 - 各業務要素の`version_number = 1`
 - 変更確定前のため`ChangeSet`は0件
+- 公開済みの「経費申請」WorkflowVersion 1件と、その項目定義8件、step定義4件
+- 開始前のためCase、WorkItem、Approval、Activityは0件
 
 seedの各rowには作成対象organization IDを設定します。固定するのはサンプル内の論理的な
 対応だけで、組織間で同じUUIDを使い回しません。
 
 onboardingの再試行で二重作成しないよう、組織内に初期業務要素が存在するかを確認してから
-作成します。一部だけ作成された状態を残さないよう、4 domain tableのseedは一つの
+作成します。一部だけ作成された状態を残さないよう、業務知識と業務定義のseedは一つの
 PostgreSQL transactionで作成します。
 
 ## 4. 入力制限
@@ -85,6 +89,9 @@ transactionとして許可します。
 - `Relation`
 - 初期versionを含む`EntityVersion`
 - すべての`ChangeSet`
+- すべてのCaseと配下の項目値、WorkItem、Approval、Activity
+- WorkflowDefinition、WorkflowVersion、FieldDefinition、StepDefinition
+- すべてのCommunicationMessageとCommunicationChannel
 
 次は削除しません。
 
@@ -94,11 +101,12 @@ transactionとして許可します。
 
 ### 6.2 実行規則
 
-1. 利用者へ、現在の組織の変更内容と変更履歴が削除されることを確認する。
+1. 利用者へ、現在の組織の案件、作業、メッセージ、変更内容、変更履歴が削除されることを確認する。
 2. Server Actionがsession、membership、`workspace.reset`権限を再検証する。
-3. transaction内で、現在のorganization IDに一致する変更履歴、version、関係、業務要素を
-   参照制約に従う順序で削除する。
-4. 同じorganization IDを設定したseedから、業務要素、関係、初期versionを再作成する。
+3. transaction内で、現在のorganization IDに一致するメッセージ、チャンネル、案件、業務定義、
+   変更履歴、version、関係、業務要素を参照制約に従う順序で削除する。
+4. 同じorganization IDを設定したseedから、業務要素、関係、初期version、公開済み経費申請、
+   初期チャンネルを再作成する。
 5. すべて成功した場合だけcommitする。
 
 リセット自体を`ChangeSet`として記録せず、リセット前の履歴は保持しません。リセットによって
@@ -126,6 +134,10 @@ PostgreSQL advisory transaction lockで同一組織だけを直列化します�
 
 - E2E testごとに専用利用者と専用組織を作り、ほかのtestや公開状態をresetしない。
 - 初回作成後に12業務要素、15関係、各初期versionが組織内に存在することを確認する。
+- 公開済み経費申請と定義済み項目・stepが存在し、差し戻し、再申請、承認、経理完了を同じ案件で
+  処理できることを確認する。
+- 処理済みWorkItemの再実行を競合として拒否し、別組織からCase IDを指定しても取得できないことを
+  確認する。
 - onboardingを再試行してもseedが重複しないことを確認する。
 - 同じ`before_version_id`から二つの変更を確定した場合、一方だけが成功することを確認する。
 - 一組織のリセット中も、別組織の一覧・変更履歴が変化しないことを確認する。

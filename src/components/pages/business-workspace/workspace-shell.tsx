@@ -8,12 +8,12 @@ import {
   useTransition,
 } from "react";
 import type { MouseEventHandler, ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 import { resetDemoAction } from "@/app/actions";
 import { EntityNavigation } from "@/components/pages/business-workspace/entity-navigation/entity-navigation";
-import { WorkspaceHeader } from "@/components/pages/business-workspace/workspace-header";
-import { createEntityPath } from "@/constants/routes";
+import { WorkspaceSidebar } from "@/components/pages/business-workspace/workspace-sidebar";
+import { createOrganizationPath } from "@/constants/routes";
 import type { WorkspaceNavigationEntity } from "@/types/workspace";
 
 type WorkspaceRouteState = {
@@ -43,6 +43,7 @@ export function WorkspaceShell({
   children: ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
   const [resetError, setResetError] = useState<string | null>(null);
   const [routeState, setRouteState] = useState<WorkspaceRouteState>({
@@ -63,7 +64,7 @@ export function WorkspaceShell({
 
   function resetDemo() {
     const confirmed = window.confirm(
-      "この組織のすべての変更内容と変更履歴を削除し、初期状態へ戻します。続けますか？",
+      "この組織の案件、作業、メッセージ、変更内容、変更履歴を削除し、初期状態へ戻します。続けますか？",
     );
 
     if (!confirmed) {
@@ -75,7 +76,7 @@ export function WorkspaceShell({
       const result = await resetDemoAction(organizationSlug);
 
       if (result.status === "success") {
-        router.push(createEntityPath(organizationSlug, result.initialEntityId));
+        router.push(createOrganizationPath(organizationSlug));
         router.refresh();
         return;
       }
@@ -86,8 +87,9 @@ export function WorkspaceShell({
 
   return (
     <WorkspaceRouteStateContext.Provider value={setRouteState}>
-      <div className="min-h-screen">
-        <WorkspaceHeader
+      <div className="min-h-screen lg:grid lg:grid-cols-[17rem_minmax(0,1fr)]">
+        <WorkspaceSidebar
+          organizationSlug={organizationSlug}
           organizationName={organizationName}
           userName={userName}
           roleLabel={roleLabel}
@@ -96,7 +98,7 @@ export function WorkspaceShell({
         />
         <main
           aria-busy={isPending}
-          className="mx-auto max-w-[92rem] px-4 py-5 sm:px-6 sm:py-7 lg:px-8"
+          className="min-w-0 px-4 py-5 sm:px-6 sm:py-7 xl:px-8"
         >
           {resetError ? (
             <div
@@ -107,13 +109,21 @@ export function WorkspaceShell({
             </div>
           ) : null}
 
-          <div className="grid items-start gap-5 lg:grid-cols-[19rem_minmax(0,1fr)]">
-            <EntityNavigation
-              organizationSlug={organizationSlug}
-              entities={entities}
-              selectedEntityId={routeState.activeEntityId}
-              onNavigate={handleEntityNavigate}
-            />
+          <div
+            className={`mx-auto grid max-w-[96rem] items-start gap-5 ${
+              isKnowledgePath(pathname, organizationSlug)
+                ? "xl:grid-cols-[19rem_minmax(0,1fr)]"
+                : "grid-cols-1"
+            }`}
+          >
+            {isKnowledgePath(pathname, organizationSlug) ? (
+              <EntityNavigation
+                organizationSlug={organizationSlug}
+                entities={entities}
+                selectedEntityId={routeState.activeEntityId}
+                onNavigate={handleEntityNavigate}
+              />
+            ) : null}
             <div className="min-w-0 rounded-3xl border border-outline bg-surface shadow-panel">
               {children}
             </div>
@@ -126,6 +136,15 @@ export function WorkspaceShell({
         </main>
       </div>
     </WorkspaceRouteStateContext.Provider>
+  );
+}
+
+function isKnowledgePath(pathname: string, organizationSlug: string) {
+  const organizationPath = createOrganizationPath(organizationSlug);
+  return (
+    pathname.startsWith(`${organizationPath}/documents`) ||
+    pathname.startsWith(`${organizationPath}/entities`) ||
+    pathname.startsWith(`${organizationPath}/changes`)
   );
 }
 
