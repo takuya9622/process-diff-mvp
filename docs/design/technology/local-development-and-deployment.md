@@ -5,8 +5,8 @@
 | 項目 | 内容 |
 |---|---|
 | 文書状態 | MVP実装済み |
-| 対象 | Docker Composeによるローカル開発、環境変数、Vercel Git連携CD |
-| 最終更新日 | 2026-08-09 |
+| 対象 | Docker Composeによるローカル開発、環境変数、Vercel Git連携CD、本番DB適用 |
+| 最終更新日 | 2026-08-11 |
 
 この文書では、[MVP技術選定](README.md)で採用した技術をローカルとVercelへ配置する方法を
 定義します。端末固有の設定や個人の認証情報は扱いません。
@@ -40,13 +40,14 @@ Docker公式の[Next.jsコンテナ化ガイド](https://docs.docker.com/guides/
 
 ## 4. Vercelの継続的デプロイ
 
-Vercel Hobbyの個人Git連携と組み込みCI/CDを使用します。GitHub ActionsやVercel CLIを使う
-別のデプロイworkflowは作成しません。
+アプリケーションのbuildとdeployには、Vercel Hobbyの個人Git連携と組み込みCI/CDを使用します。
+GitHub Actionsは、リリース前のProduction database適用ゲートだけに使用します。Vercel CLIを
+使う別のアプリケーションdeploy workflowは作成しません。
 
 ```text
-作業ブランチ ──PR──> develop ──リリースPR──> main
-     │                  │                       │
-     └ Preview          └ Preview               └ Production
+作業ブランチ ──PR──> develop ──リリースPR──> Production data gate ──merge──> main
+     │                  │                            │                         │
+     └ Preview          └ Preview                    └ migration / seed / verify └ Production
 ```
 
 - VercelプロジェクトをGitHubリポジトリへ接続する。
@@ -54,6 +55,7 @@ Vercel Hobbyの個人Git連携と組み込みCI/CDを使用します。GitHub Ac
 - `main`へマージされたcommitをProduction Deploymentとして自動デプロイする。
 - `main`以外のブランチはPreview Deploymentとして扱う。
 - `main`への直接pushは禁止し、`develop`からのリリースPull Requestだけを取り込む。
+- リリースPull Requestのhead commitに対する`Production data gate`が成功するまでmergeしない。
 - Vercelのbuild成功はデプロイの条件になるが、GitHub Actionsのrequired checkにはしない。
 - デプロイ失敗時は原因を修正した新しいPull Requestを作成し、`main`を書き換えない。
 
@@ -75,13 +77,40 @@ Hobbyには個人Git連携と組み込みCI/CDが含まれますが、利用条�
 - `NEXT_PUBLIC_`を付ける変数には、ブラウザへ公開してよい値だけを設定する。
 - `.vercel`ディレクトリとVercelのtoken、project IDをコミットしない。
 
-## 6. migrationとデプロイの境界
+## 6. 本番DB適用ゲート
 
 - ローカルmigrationはDocker Compose上のPostgreSQLへ適用する。
 - Production migrationをVercelのbuild commandへ含めない。
-- Production migrationは内容を確認したうえで明示的に実行し、実行結果をリリースPull Requestへ
-  記録する。
+- GitHubの`production` Environmentに`PRODUCTION_DATABASE_URL` secretを一度だけ設定する。
+- branch protectionでは`Apply migrations, seed, and verify`を`main`のrequired checkにする。
+- Production databaseへ接続するworkflowは、`develop`から`main`へのリリースPull Request、または
+  障害復旧用の手動実行だけに限定する。
 - 既存のProductionアプリケーションと両立しない破壊的変更は、一回のデプロイで行わない。
+
+### 6.1 リリース時の順序
+
+1. migrationをreviewし、現在稼働中のアプリケーションと後方互換な追加変更であることを確認する。
+2. `develop`から`main`へのリリースPull Requestを作成する。
+3. workflowがリリースPull Requestの40文字のhead commit SHAをcheckoutする。
+4. `npm run db:migrate`で未適用migrationだけをProduction databaseへ適用する。
+5. `npm run db:seed:all`で全組織の初期業務、経費申請workflow、初期channelの不足分だけを補う。
+6. `npm run db:verify`でmigrationの件数・hash・適用時刻と、全組織のseed状態を確認する。
+7. gateが成功した同じcommitを`main`へmergeし、VercelのProduction Deploymentを待つ。
+8. `/api/health`がHTTP 200を返し、認証後に業務スペースを表示できることを確認する。
+
+`db:seed:all`は冪等かつ追加的に実行し、利用者が変更した業務データを上書きしません。既存組織に
+初期業務が存在しないなど安全に補完できない状態では失敗し、リリースを止めます。削除を伴う
+`db:reset`は本番適用手順では使用しません。
+
+### 6.2 障害復旧と失敗時
+
+既にコードが公開され、migrationまたはseedだけが未適用の場合は、`Production data gate`を
+`workflow_dispatch`から手動実行します。入力には適用対象の完全な40文字commit SHAを指定し、
+実行後にdatabase検証と`/api/health`を再確認します。
+
+適用途中で失敗した場合は`main`へmergeしません。databaseを安易に巻き戻さず、失敗原因を修正した
+追加migrationまたはseedで前進させます。将来、既存columnやtableの削除が必要になった場合は、
+追加・移行・参照切替・削除を複数リリースへ分けるexpand and contract方式を使用します。
 
 ## 7. ローカル確認
 

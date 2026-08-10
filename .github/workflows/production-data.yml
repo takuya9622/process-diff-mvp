@@ -1,0 +1,94 @@
+name: Production data gate
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, reopened, synchronize, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Full 40-character commit SHA to apply
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-data
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    name: Apply migrations, seed, and verify
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.head.ref == 'develop' && github.event.pull_request.draft == false)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    env:
+      CONFIRM_PRODUCTION_DATA_APPLY: "true"
+      DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+    steps:
+      - name: Resolve release commit
+        id: release
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          MANUAL_RELEASE_SHA: ${{ inputs.release_sha }}
+          PR_RELEASE_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            release_sha="$PR_RELEASE_SHA"
+          else
+            release_sha="$MANUAL_RELEASE_SHA"
+          fi
+
+          if [[ ! "$release_sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::release_sha must be a full 40-character commit SHA."
+            exit 1
+          fi
+
+          echo "release_sha=$release_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Check out release commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.release.outputs.release_sha }}
+
+      - name: Verify checked-out commit and secret
+        env:
+          RELEASE_SHA: ${{ steps.release.outputs.release_sha }}
+        run: |
+          if [[ "$(git rev-parse HEAD)" != "$RELEASE_SHA" ]]; then
+            echo "::error::Checked-out commit does not match the requested release SHA."
+            exit 1
+          fi
+
+          if [[ -z "$DATABASE_URL" ]]; then
+            echo "::error::Configure PRODUCTION_DATABASE_URL in the production GitHub Environment."
+            exit 1
+          fi
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply and verify Production data
+        run: npm run db:apply:production
+
+      - name: Record result
+        env:
+          RELEASE_SHA: ${{ steps.release.outputs.release_sha }}
+        run: |
+          {
+            echo "### Production data gate"
+            echo ""
+            echo "- Release SHA: \`$RELEASE_SHA\`"
+            echo "- Migration, idempotent seed, and verification: passed"
+          } >> "$GITHUB_STEP_SUMMARY"
