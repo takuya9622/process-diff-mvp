@@ -24,8 +24,10 @@
 算出規則は[影響候補の探索仕様](impact-search.md)、組織別状態とリセットは
 [組織別サンプル状態の管理](demo-state.md)、認証・組織を含む次期処理境界は
 [認証・組織ワークスペース設計](authentication-and-organization.md)で定義します。
-現行MVPで補う価値と、外部SaaSや推定関係を扱う次期境界は
-[MVPの不足点とプロダクト方針](../requirements/mvp-gaps-and-product-direction.md)を参照してください。
+現行MVPで補う価値と次段階の優先順位は
+[MVPの不足点とプロダクト方針](../requirements/mvp-gaps-and-product-direction.md)、案件、タスク、
+承認、証跡をネイティブに扱う論理境界は
+[ネイティブ業務ワークフロー設計](native-business-workflows.md)を参照してください。
 
 ## 2. 図の管理方法
 
